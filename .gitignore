@@ -1,0 +1,54 @@
+﻿# Secretos y variables de entorno
+.env
+.env.*
+!.env.example
+**/*service_role*
+**/*secret_key*
+/respaldos/
+**/respaldos/
+/js/config.js
+**/busqueda_pedido.txt
+
+# Respaldos y archivos temporales
+*.bak
+*.backup
+*.old
+*.tmp
+*.ANTES_*
+*ROTO-ACTUAL*
+*admin_antes_*
+*respaldo*
+busqueda_pedido.txt
+
+# Dependencias y registros
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Archivos locales de herramientas
+.vscode/
+.idea/
+
+# Respaldos adicionales del proyecto
+js/backend_backup_*.js
+INFORME_RECUPERACION.md
+LEEME_DISENO.md
+limpiar_respaldos.ps1
+
+
+# Respaldos identificados durante la auditoria
+*.bak*
+*.backup*
+*_backup_*
+*_backup.*
+*_antes_*
+*_ANTES_*
+*backup_fase*
+*ROTO-ACTUAL*
+*.old
+*.tmp
+
+
+# Archivo alternativo pendiente de verificar
+js/store_con_id_conectado.js
