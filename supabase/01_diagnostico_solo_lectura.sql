@@ -1,10 +1,3 @@
--- =====================================================================
--- 01: DIAGNÓSTICO PREVIO (SOLO LECTURA)
--- Ejecútalo en Supabase > SQL Editor > Run antes de aplicar la migración.
--- No modifica ninguna fila ni estructura. Devuelve el estado exacto de tu BD.
--- =====================================================================
-
--- 1) Tablas existentes en el esquema public y su conteo de registros
 select 
   table_name,
   (xpath('/row/cnt/text()', xml_count))[1]::text::int as total_filas

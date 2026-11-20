@@ -1,11 +1,4 @@
--- =====================================================================
--- PASO 2: productos y ajustes en la base de datos + puntos + ruleta.
--- Ejecútalo DESPUÉS de schema.sql (en Supabase > SQL Editor > Run). Es seguro ejecutarlo varias veces.
--- =====================================================================
 
--- ---------------------------------------------------------------------
--- 1) Productos y ajustes. Cualquiera puede LEER (es lo que ve la tienda); solo el administrador puede escribir.
---    Un producto oculto (activo = false) solo lo ve el administrador.
 -- ---------------------------------------------------------------------
 create table if not exists public.productos (
   id     text primary key check (id ~ '^[A-Za-z0-9_-]{1,40}$'),

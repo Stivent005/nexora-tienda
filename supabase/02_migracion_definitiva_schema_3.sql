@@ -1,17 +1,3 @@
--- =====================================================================
--- 02: MIGRACIÓN DEFINITIVA Y RECUPERACIÓN INTEGRAL DE PUNTOS FREE FIRE
--- 
--- Ejecutar en: Supabase > SQL Editor > Run
--- Es 100% transaccional (BEGIN ... COMMIT), idempotente y segura contra datos existentes.
--- Resuelve todas las inconsistencias detectadas:
---   1. Crea 'catalogo_premios' que faltaba por completo.
---   2. Adapta o crea 'premios' como catálogo de recompensas sin destruir cupones previos.
---   3. Corrige 'puntos_mov' (elimina PK restrictiva en pedido_id, añade id, cantidad, motivo, ref, saldo_despues).
---   4. Añade 'ff_id' y 'tipo' a 'intentos'.
---   5. Añade 'puntos_ganados' y columnas faltantes a 'giros'.
---   6. Añade 'creado' a 'puntos' para evitar fallos de permisos GRANT.
---   7. Elimina el trigger legado 'pedidos_puntos' evitando doble asignación de puntos.
--- =====================================================================
 
 begin;
 
