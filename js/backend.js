@@ -1445,7 +1445,7 @@ var Backend=(function(){
       );
     },
 
-    registrarAbono:function(
+    confirmarPagoCompleto:function(
       id,
       monto,
       metodo,
@@ -1455,7 +1455,7 @@ var Backend=(function(){
     ){
 
       return rpcChecked(
-        "admin_registrar_abono",
+        "admin_confirmar_pago_pedido",
         {
           p_pedido_id:String(id),
           p_monto:Number(monto),
