@@ -467,7 +467,7 @@ function orderRow(o){
       abonosPendientes=(o.abonos||[]).some(function(a){return a.estado==="pendiente"}),
       reintegrosPendientes=(o.abonos||[]).some(function(a){return(a.reintegros||[]).some(function(r){return r.estado==="pendiente"})});
   if((!Backend.secureCheckout&&(e==="Pendiente"||e==="Pagado"))||(Backend.secureCheckout&&e==="Pendiente"&&pagosNetos===0&&!abonosPendientes&&!reintegrosPendientes))b+='<button class="btn sm danger" data-oa="cancelar" data-id="'+esc(o.id)+'">Cancelar pedido</button>';
-  if(!Backend.secureCheckout)b+='<button class="btn sm danger" data-od="'+esc(o.id)+'">'+(pdel===o.id?"Confirmar":"Eliminar")+'</button>';
+  b+='<button class="btn sm danger" data-od="'+esc(o.id)+'">'+(pdel===o.id?"Confirmar":"Eliminar")+'</button>';
   var history=hist.length?'<details class="admin-history"><summary>Historial ('+hist.length+')</summary><ol>'+hist.slice().sort(function(a,b){return a.fecha-b.fecha}).map(function(x){return '<li><b>'+esc(x.de?x.de+" → "+x.a:"Pedido recibido · "+x.a)+'</b><small>'+esc(new Date(x.fecha).toLocaleString("es-CO"))+'</small></li>'}).join("")+'</ol></details>':'<p class="meta">No hay historial de cambios disponible para este pedido.</p>';
   return '<article class="admin-order-card"><div class="admin-order-head"><div><b>'+esc(o.nombre||"Cliente")+'</b> <span class="meta">'+esc(o.tel||"Sin teléfono")+' · '+new Date(o.fecha).toLocaleString("es-CO")+' · #'+esc(String(o.id).slice(-6).toUpperCase())+'</span></div><span class="tag'+(e==="Pendiente"?" off":"")+' st-'+e.toLowerCase()+'">'+esc(e)+'</span></div><span class="product-type '+(kind==="digital"?"is-digital":"is-physical")+'">'+esc(adminOrderTypeLabel(o))+'</span>'+
     reciboTabla(o)+(ent?'<div class="meta">'+ent+'</div>':'')+

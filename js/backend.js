@@ -1385,11 +1385,20 @@ var Backend=(function(){
         secureCheckout
       ){
 
-        return Promise.reject(
-          new Error(
-            "La migración segura no permite eliminar pedidos. Usa Cancelar pedido."
-          )
-        );
+        return rpcChecked(
+          "admin_borrar_pedido",
+          {
+            p_pedido_id:String(id)
+          }
+        ).then(function(r){
+          if(!r||r.ok!==true){
+            throw new Error(
+              (r&&r.error)||
+              "El servidor no pudo eliminar el pedido."
+            );
+          }
+          return r;
+        });
       }
 
       if(!remote){
