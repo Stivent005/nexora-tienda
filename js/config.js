@@ -10,7 +10,7 @@ var CONFIG={
   supabase:{
     enabled:true,
     secureCheckout:true,
-    customerAccounts:false,
+    customerAccounts:true,
     url:"https://nggzqiccwhndcvcmktbp.supabase.co",
     anonKey:"sb_publishable_MZPMPQz1RRku_zel0cZ4-A_zo7zgwdS"
   }
