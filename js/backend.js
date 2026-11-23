@@ -6,7 +6,7 @@ var Backend=(function(){
   var S=CONFIG.supabase||{},
       remote=!!(S.enabled===true&&S.url&&S.anonKey),
       secureCheckout=!!(remote&&S.secureCheckout===true),
-      accountsReady=!!(remote&&secureCheckout),
+      accountsReady=!!(remote&&secureCheckout&&S.customerAccounts===true),
       token=null,
       refreshT=null,
       customerUser=null,
@@ -1007,6 +1007,14 @@ var Backend=(function(){
           );
       }
 
+      if(accountsReady&&!customerUser){
+        var authRequired=new Error(
+          "Inicia sesión en tu cuenta antes de crear un pedido."
+        );
+        authRequired.code="AUTH_REQUIRED";
+        return Promise.reject(authRequired);
+      }
+
 
       /* ----------------------------------------------------
          CHECKOUT SEGURO
@@ -1279,7 +1287,7 @@ var Backend=(function(){
         "/rest/v1/pedidos?id=eq."+encodeURIComponent(id),
         null,
         {
-          Prefer:"return=representation"
+          Prefer:"return representation"
         }
       )
       .then(soloSi);

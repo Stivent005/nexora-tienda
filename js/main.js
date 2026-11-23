@@ -1,4 +1,4 @@
-/* ARRANQUE: eventos globales e inicio de la aplicaciÃ³n */
+/* ARRANQUE: eventos globales e inicio de la aplicación */
 /* ---------- Eventos ---------- */
 document.addEventListener("change",function(e){
   var el=e.target;
@@ -21,7 +21,7 @@ document.addEventListener("click",function(e){
   else if(d.add){var product=items.find(function(p){return p.id===d.add}),limit=product?stockLimit(product):0,next=(cart[d.add]||0)+1;if(next>limit){t.textContent=T("producto.stockMaximo");t.setAttribute("aria-live","polite");setTimeout(renderStore,1000);return}cart[d.add]=next;lsSet("tienda_carrito",cart);updateCount();t.textContent=T("producto.agregado");t.setAttribute("aria-live","polite");setTimeout(renderStore,700)}
   else if(d.c!==undefined&&t.classList.contains("chip")){cat=d.c;renderStore()}
   else if(d.t!==undefined&&t.classList.contains("chip")){tipoF=d.t;renderStore()}
-  else if(d.pf!==undefined){pedidoFiltro=d.pf;renderAdmin()}
+  else if(d.pf!==undefined){if(atab==="pay")adminPaymentFilter=d.pf;else pedidoFiltro=d.pf;renderAdmin()}
   else if(d.oa)cambiarEstado(d.id,d.oa);
   else if(d.tab){atab=d.tab;renderAdmin()}
   else if(d.x==="newp")openForm(null);
@@ -57,7 +57,7 @@ document.addEventListener("click",function(e){
 });
 if($("adminlink"))$("adminlink").addEventListener("click",function(){if(!authed)askPin()});
 renderAll();
-/* Arranque: la tienda lee el catÃ¡logo de la base de datos; el panel (admin.html) pide sesiÃ³n. */
+/* Arranque: la tienda lee el catálogo de la base de datos; el panel (admin.html) pide sesión. */
 if(ADMIN_PAGE){
   if(Backend.remote&&Backend.restore()){authed=true;renderAll();cargarCatalogoAdmin().then(cargarPedidos)}
   else askPin();
@@ -92,8 +92,8 @@ function cargarCatalogoCliente(){
   });
 }
 
-/* Con base de datos en lÃ­nea, revisa cada 30 s si llegaron pedidos nuevos */
-setInterval(function(){if(ADMIN_PAGE&&authed&&Backend.remote&&(atab==="orders"||atab==="dashboard"||atab==="")&&!$("dlg").open)cargarPedidos()},30000);
+/* Con base de datos en línea, revisa cada 30 s si llegaron pedidos nuevos */
+setInterval(function(){if(ADMIN_PAGE&&authed&&Backend.remote&&(atab==="orders"||atab==="pay"||atab==="dashboard"||atab==="")&&!$("dlg").open)cargarPedidos()},30000);
 
 /* Guarda lo que el cliente escribe mientras avanza por los pasos del pago */
 var CHKMAP={"c-name":"nombre","c-phone":"tel","c-ffid":"idJuego","c-addr":"addr","c-city":"city","c-department":"department","c-zone":"zone","c-reference":"reference","c-punto":"punto","c-ref":"ref"};
