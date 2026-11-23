@@ -1287,7 +1287,7 @@ var Backend=(function(){
         "/rest/v1/pedidos?id=eq."+encodeURIComponent(id),
         null,
         {
-          Prefer:"return representation"
+          Prefer:"return=representation"
         }
       )
       .then(soloSi);
