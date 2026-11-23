@@ -46,36 +46,114 @@ function adminHistory(o){
   return Array.isArray(o.historial)?o.historial:[];
 }
 function adminPaymentEvidence(record,label){
-  var image=safeImg(record&&record.comprobante);
-  return image?'<img class="comp" src="'+image+'" alt="'+esc(label||"Evidencia de pago")+'">':'';
+  var datos=record&&record.datos?record.datos:{};
+  var image=safeImg(datos.comprobante||record&&record.comprobante);
+  return image?'<img class="comp" src="'+image+'" alt="'+esc(label||"Evidencia de pago")+'">';
 }
-/* Pagos remotos: el total solo cuenta abonos verificados; los pendientes reservan saldo. */
 function adminAbonosHtml(o){
-  if(!Array.isArray(o.abonos))return '<b>Abonos: sin registro</b><span>Saldo: no disponible</span>';
-  var total=0,comprometido=0,pending=0;
-  o.abonos.forEach(function(x){var m=Number(x.monto)||0,rs=Array.isArray(x.reintegros)?x.reintegros:[],devuelto=rs.filter(function(r){return r.estado==="verificado"}).reduce(function(a,r){return a+(Number(r.monto)||0)},0);if(x.estado==="verificado"){var neto=Math.max(0,m-devuelto);total+=neto;comprometido+=neto}if(x.estado==="pendiente"){comprometido+=m;pending++}});
-  var saldo=Math.max(0,(Number(o.total)||0)-comprometido);
-  var detail=o.abonos.length?'<details class="admin-installments"><summary>Ver abonos ('+o.abonos.length+')</summary><ul>'+o.abonos.map(function(x){var estado=String(x.estado||"pendiente"),acciones=Backend.secureCheckout&&estado==="pendiente"?'<span class="admin-payment-actions"><button class="btn sm primary" data-abono-review="'+esc(x.id)+'" data-approve="1">Verificar</button><button class="btn sm danger" data-abono-review="'+esc(x.id)+'" data-approve="0">Rechazar</button></span>':'',rs=Array.isArray(x.reintegros)?x.reintegros:[],refunds=rs.map(function(r){var buttons=Backend.secureCheckout&&r.estado==="pendiente"?'<span class="admin-payment-actions"><button class="btn sm primary" data-refund-review="'+esc(r.id)+'" data-approve="1" data-order="'+esc(o.id)+'">'+(estadoDe(o)==="Pagado"?"Verificar reintegro total":"Verificar")+'</button><button class="btn sm danger" data-refund-review="'+esc(r.id)+'" data-approve="0" data-order="'+esc(o.id)+'">Rechazar</button></span>':'';return '<small>Reintegro '+fmt.format(Number(r.monto)||0)+' · '+esc(r.estado)+(r.referencia?' · Ref: '+esc(r.referencia):'')+'</small>'+adminPaymentEvidence(r,"Evidencia de reintegro")+buttons}).join(""),refundTotal=rs.filter(function(r){return r.estado==="pendiente"||r.estado==="verificado"}).reduce(function(a,r){return a+(Number(r.monto)||0)},0),refundButton=Backend.secureCheckout&&estado==="verificado"&&estadoDe(o)!=="Entregado"&&estadoDe(o)!=="Cancelado"&&refundTotal<Number(x.monto)?'<button class="btn sm" data-register-refund="'+esc(x.id)+'">Registrar reintegro</button>':'';return '<li><b>'+fmt.format(Number(x.monto)||0)+'</b><span>'+esc(x.metodo||"Método no registrado")+' · '+esc(x.fecha?new Date(x.fecha).toLocaleString("es-CO"):"Fecha no registrada")+' · '+esc(estado)+'</span>'+(x.referencia?'<small>Ref: '+esc(x.referencia)+'</small>':'')+(x.nota?'<small>'+esc(x.nota)+'</small>':'')+adminPaymentEvidence(x,"Evidencia del abono")+acciones+refunds+refundButton+'</li>'}).join("")+'</ul></details>':'<small>Sin abonos cargados</small>';
-  var registrar=Backend.secureCheckout&&estadoDe(o)==="Pendiente"&&saldo>0?'<button class="btn sm" data-register-payment="'+esc(o.id)+'">Registrar pago recibido</button>':'';
-  return '<b>Verificado neto: '+fmt.format(total)+'</b><span>Pendiente de revisar: '+pending+'</span><span>Por registrar: '+fmt.format(saldo)+'</span>'+detail+registrar;
+  var p=o&&o.pagoRegistro?o.pagoRegistro:null;
+
+  if(!p){
+    return '<b>Pago: sin registro</b><span>El pedido no tiene un registro de pago.</span>';
+  }
+
+  var estado=String(p.estado||"pendiente");
+  var monto=Number(p.monto)||0;
+  var comprobante=adminPaymentEvidence(p,"Evidencia del pago");
+
+  var accion=Backend.secureCheckout&&estado==="pendiente"
+    ?'<button class="btn sm primary" data-payment-review="'+esc(p.id)+'">Verificar pago completo</button>'
+    :'';
+
+  return '<b>Pago registrado: '+fmt.format(monto)+'</b>'+
+    '<span>'+esc(p.metodo||o.pago||"Método no registrado")+' · '+esc(estado)+'</span>'+
+    (p.referencia?'<small>Ref: '+esc(p.referencia)+'</small>':'')+
+    comprobante+
+    accion;
 }
 
 function registrarPagoManual(id){
-  var o=orders.find(function(x){return String(x.id)===String(id)});if(!o)return;
-  var comprometido=(o.abonos||[]).reduce(function(s,a){
-    var monto=Number(a.monto)||0;
-    if(a.estado==="pendiente")return s+monto;
-    if(a.estado!=="verificado")return s;
-    var devuelto=(a.reintegros||[]).filter(function(r){return r.estado==="verificado"}).reduce(function(n,r){return n+(Number(r.monto)||0)},0);
-    return s+Math.max(0,monto-devuelto);
-  },0);
-  var restante=Math.max(0,(Number(o.total)||0)-comprometido);if(!restante){alert("El total ya esta cubierto por abonos registrados.");return}
-  var monto=window.prompt("Monto recibido en este abono (saldo: "+fmt.format(restante)+")",String(restante));if(monto===null)return;
-  var n=Number(monto);if(!(n>0)||n>restante){alert("Escribe un monto mayor que cero y no superior al saldo pendiente.");return}
-  var referencia=window.prompt("Referencia o constancia del pago recibido (por ejemplo, efectivo recibido)","");if(referencia===null||!referencia.trim()){alert("La referencia es necesaria para verificar el pago.");return}
-  Backend.registrarAbono(id,n,o.pago||"Pago manual",referencia.trim(),"","").then(cargarPedidos).catch(function(e){ordersErr="No se pudo registrar el abono: "+e.message;renderAdmin()});
-}
+  var o=orders.find(function(x){
+    return String(x.id)===String(id);
+  });
 
+  if(!o)return;
+
+  var p=o.pagoRegistro||null;
+
+  if(!p){
+    alert("No existe un registro de pago para este pedido.");
+    return;
+  }
+
+  if(String(p.estado)!=="pendiente"){
+    alert("Este pago ya no está pendiente de verificación.");
+    return;
+  }
+
+  var total=Number(o.total)||Number(p.monto)||0;
+
+  if(!(total>0)){
+    alert("No se pudo determinar el total del pedido.");
+    return;
+  }
+
+  if(Number(p.monto)!==total){
+    alert("El registro de pago no coincide con el total del pedido.");
+    return;
+  }
+
+  revisarPagoCompleto(p.id);
+}
+function revisarPagoCompleto(id){
+  if(!window.confirm(
+    "Verifica que el pago COMPLETO fue recibido en su fuente. ¿Confirmas que quieres marcarlo como pagado?"
+  ))return;
+
+  var p=null;
+
+  orders.some(function(o){
+    if(!o.pagoRegistro)return false;
+
+    if(String(o.pagoRegistro.id)===String(id)){
+      p=o.pagoRegistro;
+      return true;
+    }
+
+    return false;
+  });
+
+  if(!p){
+    alert("No se encontró el registro de pago.");
+    return;
+  }
+
+  var pedidoId=String(p.pedido_id);
+
+  var o=orders.find(function(x){
+    return String(x.id)===pedidoId;
+  });
+
+  if(!o){
+    alert("No se encontró el pedido asociado.");
+    return;
+  }
+
+  Backend.confirmarPagoCompleto(
+    pedidoId,
+    Number(p.monto)||0,
+    p.metodo||o.pago||"Pago manual",
+    p.referencia||"",
+    (p.datos&&p.datos.comprobante)||"",
+    (p.datos&&p.datos.nota)||""
+  ).then(function(){
+    ordersErr="";
+    return cargarPedidos();
+  }).catch(function(e){
+    ordersErr="No se pudo verificar el pago: "+e.message;
+    renderAdmin();
+  });
+}
 function registrarReintegro(abonoId){
   var pedido=null,abono=null;
   orders.some(function(o){var found=(o.abonos||[]).find(function(a){return String(a.id)===String(abonoId)});if(found){pedido=o;abono=found;return true}return false});
@@ -187,46 +265,7 @@ function renderAdmin(){
     h+='<div class="admin-filter-row" role="group" aria-label="Filtrar pedidos por estado">'+F.map(function(f){return '<button class="chip" aria-pressed="'+(pedidoFiltro===f[0])+'" data-pf="'+f[0]+'">'+f[1]+' ('+cnt(f[0])+')</button>'}).join("")+'</div>';
     var qOrder=(adminSearch.orders||"").trim().toLowerCase();
     var vis=orders.filter(function(o){var matchText=[o.nombre,o.tel,o.id,o.pago,o.pagoId,o.referencia].concat((o.items||[]).map(function(i){return i.n})).join(" ").toLowerCase();return(!pedidoFiltro||estadoDe(o)===pedidoFiltro)&&(!adminOrderTypeFilter||adminOrderTypeFilter===getAdminOrderType(o))&&(!qOrder||matchText.indexOf(qOrder)>-1)});
-    h+=ordersLoading?'<div class="admin-empty" role="status">Cargando pedidos…</div>':(ordersErr&&!orders.length?'<div class="admin-empty" role="status">No se puede confirmar que esté vacío porque los pedidos no se pudieron cargar. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>':(vis.length?'<div class="admin-order-list">'+vis.map(orderRow).join("")+'</div>':'<div class="empty" role="status" aria-live="polite"><h2>'+(orders.length?'Sin resultados':'Aún no hay pedidos')+'</h2><p>'+(orders.length?'Prueba otra búsqueda o filtro.':'Cuando llegue un pedido real, aparecerá aquí.')+'</p></div>'));
-    $("panel").innerHTML=adminFrame(h);bindAdminSearch("admin-order-search","orders");
-    var orderTypeEl=$("admin-order-type");if(orderTypeEl)orderTypeEl.addEventListener("change",function(){adminOrderTypeFilter=orderTypeEl.value;renderAdmin()});
-    $("onew").addEventListener("click",openOrder);
-    $("orefresh").addEventListener("click",cargarPedidos);
-    document.querySelectorAll("[data-delivery]").forEach(function(button){button.addEventListener("click",function(){actualizarEntrega(button.dataset.delivery,button.dataset.kind)})});
-    document.querySelectorAll("[data-od]").forEach(function(el){el.addEventListener("click",function(){var id=el.dataset.od;if(pdel!==id){pdel=id;renderAdmin();return}pdel=null;Backend.eliminar(id).then(function(){orders=orders.filter(function(o){return o.id!==id});ordersErr="";renderAdmin()}).catch(function(e){ordersErr="No se pudo eliminar: "+e.message;renderAdmin()})})});
-    return;
-  }
-  if(atab==="customers"){
-    var mp={};orders.forEach(function(o){var k=o.tel||o.nombre||("pedido:"+o.id),c=mp[k]=mp[k]||{n:o.nombre,t:o.tel,d:o.dir||o.punto||"",count:0,sales:0,last:0,pending:0};c.count++;c.last=Math.max(c.last,Number(o.fecha)||0);if(estadoDe(o)==="Pagado"||estadoDe(o)==="Entregado")c.sales+=Number(o.total)||0;if(estadoDe(o)==="Pendiente")c.pending++;c.d=o.dir||o.punto||c.d});
-    var cq=(adminSearch.customers||"").trim().toLowerCase();
-    var cs=Object.keys(mp).map(function(k){return mp[k]}).filter(function(c){return!cq||(c.n+" "+c.t+" "+c.d).toLowerCase().indexOf(cq)>-1}).sort(function(a,b){return b.last-a.last});
-    h+='<div class="admin-tools"><label class="admin-search"><span class="sr-only">Buscar clientes</span><input id="admin-customer-search" type="search" placeholder="Buscar nombre, teléfono o dirección…" value="'+esc(adminSearch.customers)+'"></label><span class="admin-result-count">'+cs.length+' clientes</span></div>';
-    h+=cs.length?'<div class="admin-customer-list">'+cs.map(function(c){return '<article class="admin-customer-row"><div class="admin-customer-avatar" aria-hidden="true">'+esc((c.n||"?").trim().charAt(0).toUpperCase()||"?")+'</div><div class="admin-customer-info"><b>'+esc(c.n||"Nombre no registrado")+'</b><span>'+esc(c.t||"Teléfono no registrado")+'</span><small>'+esc(c.d||"Sin dirección registrada")+'</small></div><div class="admin-customer-metrics"><b>'+c.count+' pedido(s)</b><span>'+c.pending+' pendiente(s)</span><small>Último: '+esc(c.last?new Date(c.last).toLocaleDateString("es-CO"):"—")+'</small></div><strong>'+fmt.format(c.sales)+'<small> ventas confirmadas</small></strong></article>'}).join("")+'</div>':(ordersLoading?'<div class="admin-empty" role="status">Cargando clientes desde pedidos…</div>':(ordersErr&&!orders.length?'<div class="admin-empty" role="status">Los clientes no están disponibles mientras falla la carga de pedidos. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>':'<div class="empty" role="status" aria-live="polite"><h2>'+(orders.length?'Sin resultados':'Aún no hay clientes')+'</h2><p>'+(orders.length?'Prueba con otro criterio de búsqueda.':'Los clientes aparecerán aquí cuando existan pedidos reales.')+'</p></div>'));
-    $("panel").innerHTML=adminFrame(h);bindAdminSearch("admin-customer-search","customers");return;
-  }
-  if(atab==="coupons"){
-    var cu=cfg.cupones||[];
-    h+='<div class="box" style="padding:0 0 18px;max-width:560px"><div class="two"><label>Código<input id="k-c" placeholder="BIENVENIDO10"></label><label>Tipo<select id="k-t"><option value="pct">Porcentaje (%)</option><option value="fijo">Valor fijo</option></select></label></div><label>Valor<input id="k-v" type="number" min="1"></label><div class="foot"><span class="err" id="kerr"></span><button class="btn primary" id="kadd">Crear cupón</button></div></div>';
-    h+=cu.length?'<div class="list">'+cu.map(function(k,i){return '<div class="row" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between"><div><b>'+esc(k.codigo)+'</b><span class="tag'+(k.activo?' off':'')+'">'+(k.activo?"Activo":"Pausado")+'</span><div class="meta">'+(k.tipo==="pct"?k.valor+"% de descuento":fmt.format(k.valor)+" de descuento")+'</div></div><div class="acts"><button class="btn sm" data-kt="'+i+'">'+(k.activo?"Pausar":"Activar")+'</button><button class="btn sm danger" data-kd="'+i+'">Eliminar</button></div></div>'}).join("")+'</div>':'<div class="empty"><h2>Aún no hay cupones</h2><p>Crea uno y tus clientes lo escriben al pagar.</p></div>';
-    $("panel").innerHTML=adminFrame(h);
-    var sv=function(){cfg=Object.assign({},cfg,{cupones:cu});guardarCfg();renderAdmin()};
-    $("kadd").addEventListener("click",function(){var c=$("k-c").value.trim().toUpperCase(),v=Number($("k-v").value),t=$("k-t").value;
-      if(!c||!(v>0)||(t==="pct"&&v>100)||cu.some(function(x){return x.codigo===c})){$("kerr").textContent="Revisa el código (único) y el valor.";return}
-      cu.push({codigo:c,tipo:t,valor:v,activo:true});sv()});
-    document.querySelectorAll("[data-kt]").forEach(function(b){b.addEventListener("click",function(){cu[b.dataset.kt].activo=!cu[b.dataset.kt].activo;sv()})});
-    document.querySelectorAll("[data-kd]").forEach(function(b){b.addEventListener("click",function(){cu.splice(Number(b.dataset.kd),1);sv()})});
-    return;
-  }
-  if(atab==="pay"){
-    var ms=metodos();
-    var qPay=(adminSearch.payments||"").trim().toLowerCase();
-    var payOrders=orders.filter(function(o){var s=[o.nombre,o.tel,o.id,o.pago,o.referencia,o.pagoId].join(" ").toLowerCase();return!qPay||s.indexOf(qPay)>-1});
-    h+='<section class="admin-panel admin-payment-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">PEDIDOS Y EVIDENCIAS</span><h2>Pagos registrados</h2></div><button class="btn sm" data-tab="orders">Abrir pedidos</button></div>'+(ordersErr?'<div class="msg err" role="alert">'+esc(ordersErr)+'</div>':'')+
-      '<div class="admin-note">La tienda registra el método, referencia y comprobante enviados con cada pedido. La confirmación siempre es manual; revisa la evidencia o valida la recepción antes de cambiar el estado.</div>'+
-      (Backend.secureCheckout?'<div class="admin-note is-muted">Cada abono comienza pendiente. Verifica su recepción en la fuente de pago; el servidor marca el pedido pagado solo cuando el total neto está cubierto. No se habilitan entregas con saldo pendiente.</div>':'<div class="admin-note is-muted">Este modo no cuenta con un libro de abonos del servidor. La referencia o comprobante del pedido no confirma por sí solo que el pago se recibió.</div>')+
-      '<div class="admin-tools"><label class="admin-search"><span class="sr-only">Buscar pagos</span><input id="admin-payment-search" type="search" placeholder="Buscar cliente, teléfono, referencia o pedido…" value="'+esc(adminSearch.payments)+'"></label><span class="admin-result-count">'+payOrders.length+' pedidos</span></div>';
-    h+=ordersLoading?'<div class="admin-empty" role="status">Cargando registros de pago…</div>':(ordersErr&&!orders.length?'<div class="admin-empty" role="status">No se puede confirmar el estado de pagos porque los pedidos no se pudieron cargar. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>':(payOrders.length?'<div class="admin-payment-list">'+payOrders.map(function(o){var proof=safeImg(o.comprobante),kind=getAdminOrderType(o);return '<article class="admin-payment-row"><div class="admin-payment-main"><div><span class="tag st-'+adminEstadoClass(estadoDe(o))+'">'+esc(estadoDe(o)==="Pendiente"?"Por verificar":estadoDe(o))+'</span><span class="product-type '+(kind==="digital"?"is-digital":"is-physical")+'">'+esc(adminOrderTypeLabel(o))+'</span></div><h3>'+esc(o.nombre||"Cliente")+' · #'+esc(String(o.id||"").slice(-6).toUpperCase())+'</h3><p>'+esc(o.tel||"Sin teléfono")+' · '+esc(o.pago||"Método no registrado")+' · '+fmt.format(Number(o.total)||0)+'</p><small>'+esc(o.referencia?"Referencia: "+o.referencia:"Sin referencia registrada")+'</small></div><div class="admin-payment-evidence">'+(proof?'<img class="comp" src="'+proof+'" alt="Comprobante de '+esc(o.nombre||"cliente")+'" title="Clic para ampliar">':'<span class="meta">Sin comprobante adjunto</span>')+'</div><div class="admin-payment-balance">'+adminAbonosHtml(o)+'<button class="btn sm" data-review-order="'+esc(o.id)+'">Ver pedido</button></div></article>'}).join("")+'</div>':'<div class="admin-empty" role="status">'+(orders.length?'No hay pedidos que coincidan con la búsqueda.':'Aún no hay pagos asociados a pedidos.')+'</div>'))+'</section>';
-    if(ms.some(function(m){return m.activo!==false&&((m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace))}))h+='<div class="msg err">Hay métodos activos sin configurar: no se mostrarán a tus clientes hasta que agregues su número, cuenta o enlace.</div>';
+    h+=ordersLoading?'<div class="admin-empty" role="status">Cargando registros de pago…</div>':(ordersErr&&!orders.length?'<div class="admin-empty" role="status">No se puede confirmar el estado de pagos porque los pedidos no se pudieron cargar. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>':(payOrders.length?'<div class="admin-payment-list">'+payOrders.map(function(o){var p=o.pagoRegistro||null,proof=p&&p.datos?safeImg(p.datos.comprobante):null,kind=getAdminOrderType(o);return '<article class="admin-payment-row"><div class="admin-payment-main"><div><span class="tag st-'+adminEstadoClass(estadoDe(o))+'">'+esc(estadoDe(o)==="Pendiente"?"Por verificar":estadoDe(o))+'</span><span class="product-type '+(kind==="digital"?"is-digital":"is-physical")+'">'+esc(adminOrderTypeLabel(o))+'</span></div><h3>'+esc(o.nombre||"Cliente")+' · #'+esc(String(o.id||"").slice(-6).toUpperCase())+'</h3><p>'+esc(o.tel||"Sin teléfono")+' · '+esc(p&&p.metodo||o.pago||"Método no registrado")+' · '+fmt.format(Number(o.total)||0)+'</p><small>'+esc(p&&p.referencia?"Referencia: "+p.referencia:"Sin referencia registrada")+'</small></div><div class="admin-payment-evidence">'+(proof?'<img class="comp" src="'+proof+'" alt="Comprobante de '+esc(o.nombre||"cliente")+'" title="Clic para ampliar">':'<span class="meta">Sin comprobante adjunto</span>')+'</div><div class="admin-payment-balance">'+adminAbonosHtml(o)+'<button class="btn sm" data-review-order="'+esc(o.id)+'">Ver pedido</button></div></article>'}).join("")+'</div>':'<div class="admin-empty" role="status">'+(orders.length?'No hay pedidos que coincidan con la búsqueda.':'Aún no hay pagos asociados a pedidos.')+'</div>'))+'</section>';    if(ms.some(function(m){return m.activo!==false&&((m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace))}))h+='<div class="msg err">Hay métodos activos sin configurar: no se mostrarán a tus clientes hasta que agregues su número, cuenta o enlace.</div>';
     h+='<section class="admin-panel admin-methods-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">CONFIGURACIÓN</span><h2>Métodos de pago</h2></div><button class="btn primary" id="madd">Agregar método</button></div><p class="meta">Configura las opciones que tus clientes pueden elegir. Editar un método no confirma los pagos de pedidos existentes.</p>';
     h+='<div class="list">'+ms.map(function(m,i){
       var falta=(m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace);
@@ -236,10 +275,20 @@ function renderAdmin(){
     h+='</section>';
     $("panel").innerHTML=adminFrame(h);bindAdminSearch("admin-payment-search","payments");
     document.querySelectorAll("[data-review-order]").forEach(function(b){b.addEventListener("click",function(){adminSearch.orders=b.dataset.reviewOrder;adminOrderTypeFilter="";pedidoFiltro="";atab="orders";renderAdmin()})});
-    document.querySelectorAll("[data-register-payment]").forEach(function(b){b.addEventListener("click",function(){registrarPagoManual(b.dataset.registerPayment)})});
-    document.querySelectorAll("[data-abono-review]").forEach(function(b){b.addEventListener("click",function(){revisarAbono(b.dataset.abonoReview,b.dataset.approve==="1")})});
-    document.querySelectorAll("[data-register-refund]").forEach(function(b){b.addEventListener("click",function(){registrarReintegro(b.dataset.registerRefund)})});
-    document.querySelectorAll("[data-refund-review]").forEach(function(b){b.addEventListener("click",function(){revisarReintegro(b.dataset.refundReview,b.dataset.approve==="1",b.dataset.order)})});
+    document.querySelectorAll("[data-register-payment]").forEach(function(b){
+      b.addEventListener("click",function(){
+        registrarPagoManual(b.dataset.registerPayment);
+      });
+    });
+    document.querySelectorAll("[data-payment-review]").forEach(function(b){
+      b.addEventListener("click",function(){
+        revisarPagoCompleto(b.dataset.paymentReview);
+      });
+    });
+
+
+
+
     var cp=function(){return metodos().map(function(x){return Object.assign({},x)})};
     $("madd").addEventListener("click",function(){openMetodo(-1)});
     document.querySelectorAll("[data-me]").forEach(function(b){b.addEventListener("click",function(){openMetodo(Number(b.dataset.me))})});

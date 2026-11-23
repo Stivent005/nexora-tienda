@@ -1146,6 +1146,7 @@ var Backend=(function(){
             []
           ).map(normalizarPedido)
         );
+
       }
 
       var pedidoReq=call(
@@ -1153,179 +1154,36 @@ var Backend=(function(){
         "/rest/v1/pedidos?select=id,estado,creado,datos&order=creado.desc&limit=500"
       );
 
-      if(!secureCheckout){
-
-        return pedidoReq.then(function(rows){
-
-          return(
-            rows||[]
-          ).map(normalizarPedido);
-
-        });
-      }
+      var pagoReq=rpcChecked(
+        "admin_listar_pagos_pedidos",
+        {}
+      );
 
       return Promise.all([
-
         pedidoReq,
+        pagoReq
+      ]).then(function(result){
 
-        call(
-          "GET",
-          "/rest/v1/pagos_abonos?select=id,pedido_id,monto,estado,metodo,referencia,comprobante,creado,nota_admin&order=creado.asc&limit=1000"
-        ),
-
-        call(
-          "GET",
-          "/rest/v1/pagos_reintegros?select=id,abono_id,monto,estado,metodo,referencia,comprobante,creado,nota_admin&order=creado.asc&limit=1000"
-        ),
-
-        call(
-          "GET",
-          "/rest/v1/pedido_entregas?select=id,pedido_id,producto_id,tipo,cantidad,estado,datos_entrega&order=id.asc&limit=1000"
-        )
-
-      ])
-      .then(function(res){
-
-        var pedidos=
-          (res[0]||[])
-            .map(normalizarPedido),
-
-            porId={},
-            porAbono={};
+        var pedidos=(result[0]||[]).map(normalizarPedido);
+        var pagos=Array.isArray(result[1])?result[1]:[];
 
         pedidos.forEach(function(o){
 
           o.abonos=[];
           o.entregas=[];
 
-          porId[o.id]=o;
+          var registro=pagos.find(function(p){
+            return String(p.pedido_id)===String(o.id);
+          });
+
+          o.pagoRegistro=registro||null;
+
         });
 
-        (res[1]||[])
-          .forEach(function(a){
-
-            var o=
-              porId[
-                String(a.pedido_id)
-              ];
-
-            var abono={
-              id:Number(a.id),
-              monto:Number(a.monto)||0,
-              estado:String(
-                a.estado||"pendiente"
-              ),
-              metodo:String(
-                a.metodo||""
-              ),
-              referencia:String(
-                a.referencia||""
-              ),
-              comprobante:String(
-                a.comprobante||""
-              ),
-              fecha:
-                Date.parse(a.creado)||0,
-              nota:String(
-                a.nota_admin||""
-              ),
-              reintegros:[]
-            };
-
-            if(o){
-
-              o.abonos.push(
-                abono
-              );
-
-              porAbono[
-                abono.id
-              ]=abono;
-            }
-          });
-
-        (res[2]||[])
-          .forEach(function(r){
-
-            var a=
-              porAbono[
-                Number(r.abono_id)
-              ];
-
-            if(a){
-
-              a.reintegros.push({
-
-                id:Number(r.id),
-
-                monto:
-                  Number(r.monto)||0,
-
-                estado:String(
-                  r.estado||"pendiente"
-                ),
-
-                metodo:String(
-                  r.metodo||""
-                ),
-
-                referencia:String(
-                  r.referencia||""
-                ),
-
-                comprobante:String(
-                  r.comprobante||""
-                ),
-
-                fecha:
-                  Date.parse(r.creado)||0,
-
-                nota:String(
-                  r.nota_admin||""
-                )
-              });
-            }
-          });
-
-        (res[3]||[])
-          .forEach(function(d){
-
-            var o=
-              porId[
-                String(d.pedido_id)
-              ];
-
-            if(o){
-
-              o.entregas.push({
-
-                id:Number(d.id),
-
-                productoId:String(
-                  d.producto_id||""
-                ),
-
-                tipo:String(
-                  d.tipo||"fisico"
-                ),
-
-                cantidad:Number(
-                  d.cantidad
-                )||0,
-
-                estado:String(
-                  d.estado||
-                  "pendiente"
-                ),
-
-                datos:
-                  d.datos_entrega||{}
-              });
-            }
-          });
-
         return pedidos;
+
       });
+
     },
 
     actualizar:function(o){
