@@ -53,24 +53,42 @@
   function normalizeDigital(product) {
     var raw = product.digital && typeof product.digital === "object" ? product.digital : {};
     var fields = normalizeDigitalFields(raw.fields);
+
     if (product.tipo === "virtual") {
       var defaults = normalizeDigitalFields(defaultDigitalFields(product)), configured = fields;
+
       fields = defaults.map(function (field) {
-        var custom = configured.find(function (item) { return item.key === field.key; });
-        if (custom) field = Object.assign({}, field, custom, { required: true });
+        var custom = configured.find(function (item) {
+          return item.key === field.key;
+        });
+
+        if (custom) {
+          field = Object.assign({}, field, custom, { required: true });
+        }
+
         return field;
       });
+
       configured.forEach(function (field) {
-        if (!fields.some(function (item) { return item.key === field.key; })) fields.push(field);
+        if (!fields.some(function (item) {
+          return item.key === field.key;
+        })) {
+          fields.push(field);
+        }
       });
     }
+
     return {
       game: text(raw.game, 80),
       packageLabel: text(raw.packageLabel || product.valorDigital, 120),
       playerIdLabel: text(raw.playerIdLabel, 60) || "ID del jugador o cuenta",
-      playerIdValidation: ["text", "digits", "digits_6_15", "alphanumeric"].indexOf(raw.playerIdValidation) >= 0 ? raw.playerIdValidation : "text",
+      playerIdValidation: ["text", "digits", "digits_6_15", "alphanumeric"].indexOf(raw.playerIdValidation) >= 0
+        ? raw.playerIdValidation
+        : "text",
       displayNameLabel: text(raw.displayNameLabel, 60) || "Nombre visible de la cuenta",
-      serverMode: ["none", "optional", "required"].indexOf(raw.serverMode) >= 0 ? raw.serverMode : "none",
+      serverMode: ["none", "optional", "required"].indexOf(raw.serverMode) >= 0
+        ? raw.serverMode
+        : "none",
       serverLabel: text(raw.serverLabel, 60) || "Servidor o región",
       fields: fields
     };
@@ -78,17 +96,29 @@
 
   function normalizeSpecifications(source) {
     if (!Array.isArray(source)) return [];
+
     return source.slice(0, 20).map(function (item) {
       item = item && typeof item === "object" ? item : {};
-      return { name: text(item.name, 50), value: text(item.value, 120) };
-    }).filter(function (item) { return item.name && item.value; });
+
+      return {
+        name: text(item.name, 50),
+        value: text(item.value, 120)
+      };
+    }).filter(function (item) {
+      return item.name && item.value;
+    });
   }
 
   function normalizeVariants(source) {
     if (!Array.isArray(source)) return [];
+
     return source.slice(0, 50).map(function (item, index) {
       item = item && typeof item === "object" ? item : {};
-      var id = /^[A-Za-z0-9_-]{1,40}$/.test(String(item.id || "")) ? String(item.id) : "variant-" + (index + 1);
+
+      var id = /^[A-Za-z0-9_-]{1,40}$/.test(String(item.id || ""))
+        ? String(item.id)
+        : "variant-" + (index + 1);
+
       return {
         id: id,
         sku: text(item.sku, 40),
@@ -104,10 +134,19 @@
   function normalizeProduct(source, options) {
     var p = source && typeof source === "object" ? source : {};
     var opts = options || {};
+
     var validId = /^[A-Za-z0-9_-]{1,40}$/.test(String(p.id || ""));
-    var id = validId ? String(p.id) : (typeof opts.makeId === "function" ? opts.makeId() : "product-unknown");
+
+    var id = validId
+      ? String(p.id)
+      : (typeof opts.makeId === "function" ? opts.makeId() : "product-unknown");
+
     var tipo = p.tipo === "virtual" ? "virtual" : "fisico";
-    var safeImage = typeof opts.safeImage === "function" ? opts.safeImage(p.image) : "";
+
+    var safeImage = typeof opts.safeImage === "function"
+      ? opts.safeImage(p.image)
+      : "";
+
     return {
       schemaVersion: 2,
       id: id,
@@ -142,32 +181,59 @@
 
   function validateDigitalValues(fields, values) {
     values = values && typeof values === "object" ? values : {};
+
     var errors = [];
+
     normalizeDigitalFields(fields).forEach(function (field) {
       var value = text(values[field.key], field.maxLength);
       var valid = true;
-      if (field.required && !value) valid = false;
-      if (value && field.validation === "digits") valid = /^\d+$/.test(value);
-      if (value && field.validation === "digits_6_15") valid = /^\d{6,15}$/.test(value);
-      if (value && field.validation === "alphanumeric") valid = /^[A-Za-z0-9_-]+$/.test(value);
-      if (!valid) errors.push(field.label);
+
+      if (field.required && !value) {
+        valid = false;
+      }
+
+      if (value && field.validation === "digits") {
+        valid = /^\d+$/.test(value);
+      }
+
+      if (value && field.validation === "digits_6_15") {
+        valid = /^\d{6,15}$/.test(value);
+      }
+
+      if (value && field.validation === "alphanumeric") {
+        valid = /^[A-Za-z0-9_-]+$/.test(value);
+      }
+
+      if (!valid) {
+        errors.push(field.label);
+      }
     });
+
     return errors;
   }
 
   function sanitizeDigitalValues(fields, values) {
     values = values && typeof values === "object" ? values : {};
+
     var out = {};
+
     normalizeDigitalFields(fields).forEach(function (field) {
-      if (values[field.key] != null) out[field.key] = text(values[field.key], field.maxLength);
+      if (values[field.key] != null) {
+        out[field.key] = text(values[field.key], field.maxLength);
+      }
     });
+
     return out;
   }
 
   function normalizeAddress(source, legacy) {
     var a = source && typeof source === "object" ? source : {};
     var l = legacy && typeof legacy === "object" ? legacy : {};
-    var method = a.method === "pickup" || l.punto ? "pickup" : "home";
+
+    var method = a.method === "pickup" || l.punto
+      ? "pickup"
+      : "home";
+
     return {
       method: method,
       street: text(a.street || l.dir, 300),
@@ -183,13 +249,27 @@
   function validateAddress(source) {
     var a = normalizeAddress(source);
     var errors = [];
+
     if (a.method === "pickup") {
-      if (!a.pickupPoint) errors.push("punto de recogida");
+      if (!a.pickupPoint) {
+        errors.push("punto de recogida");
+      }
+
       return errors;
     }
-    if (!a.street) errors.push("dirección");
-    if (!a.city) errors.push("ciudad");
-    if (!a.department) errors.push("departamento");
+
+    if (!a.street) {
+      errors.push("dirección");
+    }
+
+    if (!a.city) {
+      errors.push("ciudad");
+    }
+
+    if (!a.department) {
+      errors.push("departamento");
+    }
+
     return errors;
   }
 
@@ -197,16 +277,43 @@
     var line = source && typeof source === "object" ? source : {};
     var digital = !!line.v;
     var allowedStates = digital ? DIGITAL_STATES : PHYSICAL_STATES;
-    var fulfillment = line.fulfillment && typeof line.fulfillment === "object" ? line.fulfillment : {};
-    var status = allowedStates.indexOf(fulfillment.status) >= 0 ? fulfillment.status : "pending";
+    var fulfillment = line.fulfillment && typeof line.fulfillment === "object"
+      ? line.fulfillment
+      : {};
+
+    /*
+     * Los pedidos nuevos pueden llegar con:
+     *   name  -> nombre del producto
+     *   price -> precio del producto
+     *
+     * Los pedidos antiguos usan:
+     *   n     -> nombre
+     *   pr    -> precio
+     *
+     * Se aceptan ambos formatos para mantener compatibilidad.
+     */
+    var name = line.n != null && line.n !== ""
+      ? line.n
+      : line.name;
+
+    var price = line.pr != null && line.pr !== ""
+      ? line.pr
+      : line.price;
+
+    var status = allowedStates.indexOf(fulfillment.status) >= 0
+      ? fulfillment.status
+      : "pending";
+
     return {
       lineId: text(line.lineId, 80) || "legacy-" + text(line.id, 40) + "-" + (Number(index) + 1),
       id: text(line.id, 40),
-      n: text(line.n, 120),
+      n: text(name, 120),
       q: Math.floor(number(line.q, 0)),
-      pr: number(line.pr, 0),
+      pr: number(price, 0),
       v: digital,
-      puntos: typeof line.puntos === "number" && Number.isFinite(line.puntos) && line.puntos >= 0 ? Math.floor(line.puntos) : null,
+      puntos: typeof line.puntos === "number" && Number.isFinite(line.puntos) && line.puntos >= 0
+        ? Math.floor(line.puntos)
+        : null,
       sku: text(line.sku, 40),
       brand: text(line.brand, 60),
       unit: text(line.unit, 30) || "unidad",
@@ -218,45 +325,100 @@
         trackingNumber: text(fulfillment.trackingNumber, 100),
         evidenceRef: text(fulfillment.evidenceRef, 100)
       },
-      digitalData: digital ? sanitizeDigitalValues(line.digitalFields, line.digitalData) : {}
+      digitalData: digital
+        ? sanitizeDigitalValues(line.digitalFields, line.digitalData)
+        : {}
     };
   }
 
   function variantIdentityErrors(source) {
-    var variants = normalizeVariants(source), ids = Object.create(null), skus = Object.create(null), errors = [];
+    var variants = normalizeVariants(source);
+    var ids = Object.create(null);
+    var skus = Object.create(null);
+    var errors = [];
+
     variants.forEach(function (variant) {
-      if (ids[variant.id]) errors.push("ID de variante duplicado: " + variant.id);
+      if (ids[variant.id]) {
+        errors.push("ID de variante duplicado: " + variant.id);
+      }
+
       ids[variant.id] = true;
-      if (variant.sku && skus[variant.sku.toLowerCase()]) errors.push("SKU de variante duplicado: " + variant.sku);
-      if (variant.sku) skus[variant.sku.toLowerCase()] = true;
+
+      if (variant.sku && skus[variant.sku.toLowerCase()]) {
+        errors.push("SKU de variante duplicado: " + variant.sku);
+      }
+
+      if (variant.sku) {
+        skus[variant.sku.toLowerCase()] = true;
+      }
     });
+
     return errors;
   }
 
   function normalizeFavoriteIds(source) {
     if (!Array.isArray(source)) return [];
-    var seen = Object.create(null), ids = [];
+
+    var seen = Object.create(null);
+    var ids = [];
+
     source.slice(0, 2000).forEach(function (value) {
       var id = typeof value === "string" ? value : "";
-      if (!/^[A-Za-z0-9_-]{1,40}$/.test(id) || seen[id]) return;
+
+      if (!/^[A-Za-z0-9_-]{1,40}$/.test(id) || seen[id]) {
+        return;
+      }
+
       seen[id] = true;
-      if (ids.length < 1000) ids.push(id);
+
+      if (ids.length < 1000) {
+        ids.push(id);
+      }
     });
+
     return ids;
   }
 
   function toggleFavoriteId(source, value) {
     var ids = normalizeFavoriteIds(source);
     var id = typeof value === "string" ? value : "";
-    if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) return { ids: ids, active: false, changed: false };
+
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) {
+      return {
+        ids: ids,
+        active: false,
+        changed: false
+      };
+    }
+
     var index = ids.indexOf(id);
+
     if (index >= 0) {
       ids.splice(index, 1);
-      return { ids: ids, active: false, changed: true };
+
+      return {
+        ids: ids,
+        active: false,
+        changed: true
+      };
     }
-    if (ids.length >= 1000) return { ids: ids, active: false, changed: false, limit: true };
+
+    if (ids.length >= 1000) {
+      return {
+        ids: ids,
+        active: false,
+        changed: false,
+        limit: true
+      };
+    }
+
     ids.push(id);
-    return { ids: ids, active: true, changed: true };
+
+    return {
+      ids: ids,
+      active: true,
+      changed: true
+    };
   }
 
   return {
