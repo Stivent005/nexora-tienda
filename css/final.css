@@ -29,7 +29,6 @@ html:not(.cur-on) #cur-dot,html:not(.cur-on) #cur-ring{opacity:0}
 .fx-feat,
 .fx-offers {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
     gap: 18px;
     align-items: stretch;
     width: 100%;
@@ -63,20 +62,12 @@ html:not(.cur-on) #cur-dot,html:not(.cur-on) #cur-ring{opacity:0}
 @media (max-width: 520px) {
     .fx-feat,
     .fx-offers {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
     }
 
     .fx-feat .info,
     .fx-offers .info {
         padding: 10px;
-    }
-}
-
-@media (max-width: 340px) {
-    .fx-feat,
-    .fx-offers {
-        grid-template-columns: minmax(0, 1fr);
     }
 }
 
