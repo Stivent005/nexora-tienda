@@ -200,9 +200,9 @@ function revisarReintegro(id,aprobar,pedidoId){
 function actualizarEntrega(id,tipo){
   var datos={};
   if(tipo==="digital"){
-    var confirmacion=window.prompt("Escribe la confirmacion o referencia de la recarga/entrega digital:","");
+    var confirmacion=window.prompt("Escribe la confirmación o referencia de la recarga/entrega digital:","");
     if(confirmacion===null)return;
-    if(confirmacion.trim().length<3){alert("La confirmacion debe tener al menos 3 caracteres.");return}
+    if(confirmacion.trim().length<3){alert("La confirmación debe tener al menos 3 caracteres.");return}
     datos.confirmacion=confirmacion.trim();
   }
   if(!window.confirm(tipo==="digital"?"¿Confirmas que completaste la entrega digital?":"¿Confirmas que entregaste este producto?"))return;
@@ -212,7 +212,7 @@ function actualizarEntrega(id,tipo){
 function adminEntregasHtml(o){
   if(!Backend.secureCheckout||estadoDe(o)!=="Pagado")return "";
   if(!Array.isArray(o.entregas)||!o.entregas.length)return '<div class="admin-note is-muted">No hay entregas registradas para este pedido.</div>';
-  return '<div class="admin-order-deliveries"><b>Entregas</b>'+o.entregas.map(function(d){var item=(o.items||[]).find(function(i){return i.id===d.productoId}),cerrada=d.estado==="entregado"||d.estado==="cancelado";return '<div class="admin-delivery-row"><span>'+esc(item&&item.n||d.productoId)+' · '+(d.tipo==="digital"?"Digital":"Fisica")+' · '+esc(d.estado)+' · '+d.cantidad+'</span>'+(cerrada?'':'<button class="btn sm primary" data-delivery="'+esc(d.id)+'" data-kind="'+esc(d.tipo)+'">'+(d.tipo==="digital"?"Confirmar recarga":"Confirmar entrega")+'</button>')+'</div>'}).join("")+'</div>';
+  return '<div class="admin-order-deliveries"><b>Entregas</b>'+o.entregas.map(function(d){var item=(o.items||[]).find(function(i){return i.id===d.productoId}),cerrada=d.estado==="entregado"||d.estado==="cancelado";return '<div class="admin-delivery-row"><span>'+esc(item&&item.n||d.productoId)+' · '+(d.tipo==="digital"?"Digital":"Física")+' · '+esc(d.estado)+' · '+d.cantidad+'</span>'+(cerrada?'':'<button class="btn sm primary" data-delivery="'+esc(d.id)+'" data-kind="'+esc(d.tipo)+'">'+(d.tipo==="digital"?"Confirmar recarga":"Confirmar entrega")+'</button>')+'</div>'}).join("")+'</div>';
 }
 
 function renderSalesChart(){
@@ -303,7 +303,8 @@ function renderAdmin(){
         :(vis.length
           ?'<div class="admin-order-list">'+vis.map(orderRow).join("")+'</div>'
           :'<div class="admin-empty" role="status">'+(sourceOrders.length?(paymentView?"No hay pagos que coincidan con la búsqueda.":"No hay pedidos que coincidan con la búsqueda."):(paymentView?"Aún no hay pagos asociados a pedidos.":"Aún no hay pedidos."))+'</div>'));
-    if(!paymentView){
+    if(paymentView){
+      var ms=metodos();
       if(ms.some(function(m){return m.activo!==false&&((m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace))}))
         h+='<div class="msg err">Hay métodos activos sin configurar: no se mostrarán a tus clientes hasta que agregues su número, cuenta o enlace.</div>';
       h+='<section class="admin-panel admin-methods-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">CONFIGURACIÓN</span><h2>Métodos de pago</h2></div><button class="btn primary" id="madd">Agregar método</button></div><p class="meta">Configura las opciones que tus clientes pueden elegir. Editar un método no confirma los pagos de pedidos existentes.</p>';
@@ -332,7 +333,7 @@ function renderAdmin(){
     document.querySelectorAll("[data-od]").forEach(function(b){
       b.addEventListener("click",function(){eliminarPedido(b.dataset.od)});
     });
-    if(!paymentView){
+    if(paymentView){
       var cp=function(){return metodos().map(function(x){return Object.assign({},x)})};
       $("madd").addEventListener("click",function(){openMetodo(-1)});
       document.querySelectorAll("[data-me]").forEach(function(b){b.addEventListener("click",function(){openMetodo(Number(b.dataset.me))})});
@@ -342,6 +343,45 @@ function renderAdmin(){
     }
     return;
   }
+  if(atab==="customers"){
+    var customersByOrder=new Map();
+    orders.slice().sort(function(a,b){return b.fecha-a.fecha}).forEach(function(order){
+      var key=order.tel||order.nombre||"pedido:"+order.id;
+      var customer=customersByOrder.get(key);
+      if(!customer){
+        customer={name:order.nombre,phone:order.tel,address:"",count:0,sales:0,last:Number(order.fecha)||0,pending:0};
+        customersByOrder.set(key,customer);
+      }
+      var address=order.direccion||{},state=estadoDe(order);
+      customer.address=customer.address||order.dir||order.punto||address.street||address.pickupPoint||"";
+      customer.count++;
+      if(state==="Pagado"||state==="Entregado")customer.sales+=Number(order.total)||0;
+      if(state==="Pendiente")customer.pending++;
+    });
+    var customerQuery=(adminSearch.customers||"").trim().toLowerCase();
+    var customers=Array.from(customersByOrder.values()).filter(function(customer){
+      return [customer.name,customer.phone,customer.address].join(" ").toLowerCase().includes(customerQuery);
+    });
+    h+='<div class="admin-tools"><label class="admin-search"><span class="sr-only">Buscar clientes</span><input id="admin-customer-search" type="search" placeholder="Buscar nombre, teléfono o dirección…" value="'+esc(adminSearch.customers)+'"></label><span class="admin-result-count">'+customers.length+' clientes</span></div>';
+    if(customers.length){
+      h+='<div class="admin-customer-list">'+customers.map(function(customer){
+        var name=customer.name||"",initial=name.trim().charAt(0).toUpperCase()||"?";
+        var last=customer.last?new Date(customer.last).toLocaleDateString("es-CO"):"—";
+        return '<article class="admin-customer-row"><div class="admin-customer-avatar" aria-hidden="true">'+esc(initial)+'</div>'+
+          '<div class="admin-customer-info"><b>'+esc(name||"Nombre no registrado")+'</b><span>'+esc(customer.phone||"Teléfono no registrado")+'</span><small>'+esc(customer.address||"Sin dirección registrada")+'</small></div>'+
+          '<div class="admin-customer-metrics"><b>'+customer.count+' pedido(s)</b><span>'+customer.pending+' pendiente(s)</span><small>Último: '+esc(last)+'</small></div><strong>'+fmt.format(customer.sales)+'<small> ventas confirmadas</small></strong></article>';
+      }).join("")+'</div>';
+    }else if(ordersLoading){
+      h+='<div class="admin-empty" role="status">Cargando clientes desde pedidos…</div>';
+    }else if(ordersErr&&!orders.length){
+      h+='<div class="admin-empty" role="status">Los clientes no están disponibles mientras falla la carga de pedidos. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>';
+    }else{
+      h+='<div class="empty" role="status" aria-live="polite"><h2>'+(orders.length?'Sin resultados':'Aún no hay clientes')+'</h2><p>'+(orders.length?'Prueba con otro criterio de búsqueda.':'Los clientes aparecerán aquí cuando existan pedidos.')+'</p></div>';
+    }
+    $("panel").innerHTML=adminFrame(h);
+    bindAdminSearch("admin-customer-search","customers");
+    return;
+  }
   if(atab==="loyalty"){renderLoyalty(h);return}
   if(atab==="security"){
     h+='<section class="admin-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">ACCESO</span><h2>Autenticación y roles</h2></div></div>'+
@@ -349,6 +389,50 @@ function renderAdmin(){
       '<div class="admin-note"><b>Roles administrativos</b><p>El contrato disponible no incluye una API para consultar ni asignar roles. No se habilitan cambios de permisos desde el navegador. Para varios administradores, el backend debe asignar roles y validarlos en cada operación; la interfaz por sí sola no protege los datos.</p></div>'+
       '<div class="admin-note is-muted"><b>Operaciones sensibles</b><p>Pedidos, pagos, inventario y ajustes necesitan autorización del servidor. Revisa la política de acceso del backend antes de publicar cambios de roles o compartir esta URL.</p></div></section>';
     $("panel").innerHTML=adminFrame(h);return;
+  }
+  if(atab==="coupons"){
+    if(catalogoCargando||catalogoError){
+      h=catalogoCargando
+        ?'<div class="admin-empty" role="status">Cargando cupones…</div>'
+        :'<div class="msg err" role="alert">'+esc(catalogoError)+' <button class="btn sm" data-x="catalog-retry">Reintentar catálogo</button></div>';
+      $("panel").innerHTML=adminFrame(h);
+      return;
+    }
+    var cu=Array.isArray(cfg.cupones)?cfg.cupones.slice():[];
+    h+='<div class="box" style="padding:0 0 18px;max-width:560px"><div class="two">'+
+      '<label>Código<input id="k-c" placeholder="BIENVENIDO10" maxlength="40"></label>'+
+      '<label>Tipo<select id="k-t"><option value="pct">Porcentaje (%)</option><option value="fijo">Valor fijo</option></select></label></div>'+
+      '<label>Valor<input id="k-v" type="number" min="0" step="any"></label>'+
+      '<div class="foot"><span class="err" id="kerr" role="alert"></span><button class="btn primary" id="kadd">Crear cupón</button></div></div>';
+    h+=cu.length?'<div class="list">'+cu.map(function(k,i){
+      return '<div class="row" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between">'+
+        '<div><b>'+esc(k.codigo)+'</b><span class="tag'+(k.activo?'':' off')+'">'+(k.activo?'Activo':'Pausado')+'</span>'+
+        '<div class="meta">'+(k.tipo==="pct"?esc(k.valor)+"%":fmt.format(k.valor))+" de descuento</div></div>"+
+        '<div class="acts"><button class="btn sm" data-kt="'+i+'">'+(k.activo?'Pausar':'Activar')+'</button>'+
+        '<button class="btn sm danger" data-kd="'+i+'">Eliminar</button></div></div>';
+    }).join("")+'</div>':'<div class="empty" role="status"><h2>Aún no hay cupones</h2><p>Crea uno y tus clientes lo escriben al pagar.</p></div>';
+    $("panel").innerHTML=adminFrame(h);
+    var sv=function(){cfg=Object.assign({},cfg,{cupones:cu});guardarCfg();renderAdmin()};
+    $("kadd").addEventListener("click",function(){
+      var c=$("k-c").value.trim().toUpperCase(),v=Number($("k-v").value),t=$("k-t").value;
+      if(!c||c.length>40||cu.some(function(k){return String(k.codigo).toUpperCase()===c})){
+        $("kerr").textContent="Escribe un código único de hasta 40 caracteres.";
+        return;
+      }
+      if(!Number.isFinite(v)||v<=0||(t==="pct"&&(v<1||v>100))){
+        $("kerr").textContent=t==="pct"?"El porcentaje debe estar entre 1 y 100.":"El valor debe ser mayor que cero.";
+        return;
+      }
+      cu.push({codigo:c,tipo:t,valor:v,activo:true});
+      sv();
+    });
+    document.querySelectorAll("[data-kt]").forEach(function(b){b.addEventListener("click",function(){
+      var i=Number(b.dataset.kt);
+      cu[i]=Object.assign({},cu[i],{activo:!cu[i].activo});
+      sv();
+    })});
+    document.querySelectorAll("[data-kd]").forEach(function(b){b.addEventListener("click",function(){cu.splice(Number(b.dataset.kd),1);sv()})});
+    return;
   }
   if(atab==="settings"){
     h+='<div class="box" style="padding:0;max-width:560px"><label>Nombre de la tienda<input id="s-nombre"></label><label>Lema de bienvenida<input id="s-lema"></label><label>WhatsApp de contacto para tus clientes (con código de país, sin +)<input id="s-wa" inputmode="numeric"></label><div class="two"><label>Color principal<input id="s-color" type="color" style="height:42px;padding:4px"></label><label>Logo (opcional)<input id="s-logo" type="file" accept="image/*"></label></div><label class="chk"><input id="s-nologo" type="checkbox"> Quitar el logo actual</label><label>Clave de administración (solo se usa sin base de datos)<input id="s-clave"></label><label>Puntos de recogida sugeridos (uno por línea)<textarea id="s-puntos" rows="3" placeholder="Parque principal, sábados 3 pm"></textarea></label><div class="foot"><span class="meta" id="smsg"></span><button class="btn primary" id="ssave">Guardar ajustes</button></div></div>';
@@ -371,7 +455,7 @@ function renderAdmin(){
     h+='<div class="box" style="padding:0"><p class="meta">Tus productos se guardan solo en este navegador. Para que los vea todo el mundo, copia este respaldo y pégalo en <b>DATOS_INICIALES</b> dentro del archivo (reemplazando las llaves vacías). Incluye tus productos y tus ajustes. También puedes pegar un respaldo aquí para restaurarlo.</p><label class="sr-only" for="bk">Datos de respaldo de productos y ajustes</label><textarea id="bk" rows="10" spellcheck="false">'+esc(JSON.stringify({config:(function(){var c=Object.assign({},cfg);delete c.claveAdmin;return c})(),productos:items}))+'</textarea><div class="foot"><button class="btn" id="bkcopy">Copiar respaldo</button><button class="btn primary" id="bkload">Restaurar desde el texto</button></div><div class="meta" id="bkmsg"></div></div>';
     $("panel").innerHTML=adminFrame(h);
     $("bkcopy").addEventListener("click",function(){$("bk").select();try{document.execCommand("copy");$("bkmsg").textContent="Copiado."}catch(e){$("bkmsg").textContent="Selecciona el texto y cópialo."}});
-    $("bkload").addEventListener("click",function(){try{var d=JSON.parse($("bk").value);var pr=Array.isArray(d)?d:d.productos;if(!Array.isArray(pr))throw 0;items=pr.map(limpiarProducto);if(d.config&&typeof d.config==="object"){var dc=Object.assign({},d.config);delete dc.supabase;delete dc.claveAdmin;cfg=Object.assign({},cfg,dc);guardarCfg()}persist();$("bkmsg").textContent="Restaurado: "+pr.length+" productos.";renderAdmin()}catch(e){$("bkmsg").textContent="El texto no es un respaldo vílido."}});
+    $("bkload").addEventListener("click",function(){try{var d=JSON.parse($("bk").value);var pr=Array.isArray(d)?d:d.productos;if(!Array.isArray(pr))throw 0;items=pr.map(limpiarProducto);if(d.config&&typeof d.config==="object"){var dc=Object.assign({},d.config);delete dc.supabase;delete dc.claveAdmin;cfg=Object.assign({},cfg,dc);guardarCfg()}persist();$("bkmsg").textContent="Restaurado: "+pr.length+" productos.";renderAdmin()}catch(e){$("bkmsg").textContent="El texto no es un respaldo válido."}});
     return;
   }
   $("panel").innerHTML=adminFrame(h);
