@@ -201,17 +201,22 @@ function revisarReintegro(id,aprobar,pedidoId){
   request.then(function(){ordersErr="";return cargarPedidos()}).catch(function(e){ordersErr="No se pudo revisar el reintegro: "+e.message;renderAdmin()});
 }
 
+
 function actualizarEntrega(id,tipo){
-  var datos={};
-  if(tipo==="digital"){
-    var confirmacion=window.prompt("Escribe la confirmación o referencia de la recarga/entrega digital:","");
-    if(confirmacion===null)return;
-    if(confirmacion.trim().length<3){alert("La confirmación debe tener al menos 3 caracteres.");return}
-    datos.confirmacion=confirmacion.trim();
-  }
-  if(!window.confirm(tipo==="digital"?"¿Confirmas que completaste la entrega digital?":"¿Confirmas que entregaste este producto?"))return;
-  Backend.actualizarEntrega(id,"entregado",datos).then(cargarPedidos).catch(function(e){ordersErr="No se pudo actualizar la entrega: "+e.message;renderAdmin()});
+  if(!window.confirm(
+    tipo==="digital"
+      ?"¿Confirmas que completaste la recarga digital?"
+      :"¿Confirmas que entregaste este producto?"
+  ))return;
+
+  Backend.actualizarEntrega(id,"entregado",{})
+    .then(cargarPedidos)
+    .catch(function(e){
+      ordersErr="No se pudo actualizar la entrega: "+e.message;
+      renderAdmin();
+    });
 }
+
 
 function adminEntregasHtml(o){
   if(!Backend.secureCheckout||estadoDe(o)!=="Pagado")return "";
