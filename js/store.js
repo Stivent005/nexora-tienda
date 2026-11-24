@@ -886,8 +886,8 @@ function bindCheckoutValidation() {
   if (pu) { pu.addEventListener("input", valPu); pu.addEventListener("blur", valPu); if (pu.value) valPu(); }
 }
 
-function checkoutFingerprint(L) {
-  var value=JSON.stringify({user:(Backend.customer?Backend.customer()||{}:{}).id||"",items:L.map(function(l){return{id:l.p.id,q:l.n,price:eff(l.p),digital:esV(l),data:chk.digital[l.p.id]||{}}}),name:chk.nombre.trim(),tel:chk.tel.trim(),gameId:ptsSoloNum(chk.idJuego),mode:chk.modo,address:[chk.addr,chk.city,chk.department,chk.zone,chk.reference,chk.punto],pay:chk.pay,reference:chk.ref.trim(),proof:compImg,coupon:coupon?coupon.codigo:"",subtotal:subtotal(),discount:discount()}),hash=2166136261;
+function checkoutFingerprint(L, referencia, comprobante) {
+  var value=JSON.stringify({user:(Backend.customer?Backend.customer()||{}:{}).id||"",items:L.map(function(l){return{id:l.p.id,q:l.n,price:eff(l.p),digital:esV(l),data:chk.digital[l.p.id]||{}}}),name:chk.nombre.trim(),tel:chk.tel.trim(),gameId:ptsSoloNum(chk.idJuego),mode:chk.modo,address:[chk.addr,chk.city,chk.department,chk.zone,chk.reference,chk.punto],pay:chk.pay,reference:referencia,proof:comprobante,coupon:coupon?coupon.codigo:"",subtotal:subtotal(),discount:discount()}),hash=2166136261;
   for(var i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619)}
   return ("00000000"+(hash>>>0).toString(16)).slice(-8);
 }
@@ -920,6 +920,8 @@ function sendOrder() {
   var m = disponibles(L).find(function (x) {
     return x.id === chk.pay;
   });
+  var referencia = chk.ref.trim();
+  var comprobante = m && m.tipo !== "efectivo" ? compImg : "";
 
   var f = validarDatos(L);
 
@@ -927,8 +929,8 @@ function sendOrder() {
     f.push(T("falta.formaPago"));
   } else if (
     m.tipo !== "efectivo" &&
-    !chk.ref.trim() &&
-    !compImg
+    !referencia &&
+    !comprobante
   ) {
     f.push(T("falta.referencia"));
   }
@@ -941,7 +943,7 @@ function sendOrder() {
     return;
   }
 
-  var fingerprint=typeof checkoutFingerprint==="function"?checkoutFingerprint(L):"";
+  var fingerprint=typeof checkoutFingerprint==="function"?checkoutFingerprint(L, referencia, comprobante):"";
   var fechaPedido=Date.now(), pedidoId=typeof pendingOrderKey==="function"?pendingOrderKey(fingerprint):uid();
   var o = {
     version: 2,
@@ -989,8 +991,8 @@ function sendOrder() {
 
     pago: m.nombre,
     pagoId: m.id,
-    referencia: chk.ref.trim(),
-    comprobante: m.tipo === "efectivo" ? "" : compImg,
+    referencia: referencia,
+    comprobante: comprobante,
 
     dir: hp && chk.modo === "dom" ? chk.addr.trim() : "",
     punto: hp && chk.modo === "punto" ? chk.punto.trim() : "",

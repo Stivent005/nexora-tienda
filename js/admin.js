@@ -46,12 +46,15 @@ function adminEstadoClass(estado){return String(estado||"").toLowerCase().replac
 function adminHistory(o){
   return Array.isArray(o.historial)?o.historial:[];
 }
-function adminPaymentEvidence(record,label){
-  var datos=record&&record.datos?record.datos:{};
-  var image=safeImg(datos.comprobante||record&&record.comprobante);
-  return image ? '<img class="comp" src="' + image + '" alt="' + esc(label || "Evidencia de pago") + '">' : '';
+function adminPaymentDetails(o){
+  var p=o.pagoRegistro||{},datos=p.datos||{};
+  return {
+    referencia:p.referencia||datos.referencia||o.referencia||"",
+    comprobante:safeImg(datos.comprobante)||safeImg(p.comprobante)||safeImg(o.comprobante),
+    nota:datos.nota||""
+  };
 }
-function adminAbonosHtml(o){
+function adminPagoHtml(o){
   var p=o&&o.pagoRegistro?o.pagoRegistro:null;
 
   if(!p){
@@ -60,7 +63,7 @@ function adminAbonosHtml(o){
 
   var estado=String(p.estado||"pendiente");
   var monto=Number(p.monto)||0;
-  var comprobante=adminPaymentEvidence(p,"Evidencia del pago");
+  var datos=adminPaymentDetails(o);
 
   var puedeVerificar=estado==="pendiente"||estado==="en_revision";
   var total=Number(o&&o.total)||0;
@@ -73,8 +76,8 @@ function adminAbonosHtml(o){
 
   return '<b>Pago registrado: '+fmt.format(monto)+'</b>'+
     '<span>'+esc(p.metodo||o.pago||"Método no registrado")+' · '+esc(estado)+'</span>'+
-    (p.referencia?'<small>Ref: '+esc(p.referencia)+'</small>':'')+
-    comprobante+
+    (datos.referencia?'<small>Ref: '+esc(datos.referencia)+'</small>':'')+
+    (datos.comprobante?'<img class="comp" src="'+datos.comprobante+'" alt="Evidencia del pago">':'')+
     accion;
 }
 
@@ -155,13 +158,14 @@ function revisarPagoCompleto(id){
     return;
   }
 
+  var datos=adminPaymentDetails(o);
   Backend.confirmarPagoCompleto(
     pedidoId,
     Number(p.monto)||0,
     p.metodo||o.pago||"Pago manual",
-    p.referencia||"",
-    (p.datos&&p.datos.comprobante)||"",
-    (p.datos&&p.datos.nota)||""
+    datos.referencia,
+    datos.comprobante,
+    datos.nota
   ).then(function(){
     ordersErr="";
     return cargarPedidos();
@@ -212,7 +216,13 @@ function actualizarEntrega(id,tipo){
 function adminEntregasHtml(o){
   if(!Backend.secureCheckout||estadoDe(o)!=="Pagado")return "";
   if(!Array.isArray(o.entregas)||!o.entregas.length)return '<div class="admin-note is-muted">No hay entregas registradas para este pedido.</div>';
-  return '<div class="admin-order-deliveries"><b>Entregas</b>'+o.entregas.map(function(d){var item=(o.items||[]).find(function(i){return i.id===d.productoId}),cerrada=d.estado==="entregado"||d.estado==="cancelado";return '<div class="admin-delivery-row"><span>'+esc(item&&item.n||d.productoId)+' · '+(d.tipo==="digital"?"Digital":"Física")+' · '+esc(d.estado)+' · '+d.cantidad+'</span>'+(cerrada?'':'<button class="btn sm primary" data-delivery="'+esc(d.id)+'" data-kind="'+esc(d.tipo)+'">'+(d.tipo==="digital"?"Confirmar recarga":"Confirmar entrega")+'</button>')+'</div>'}).join("")+'</div>';
+  return '<div class="admin-order-deliveries"><b>Entregas</b>'+o.entregas.map(function(d){
+    var productoId=d.producto_id==null?d.productoId:d.producto_id;
+    var item=(o.items||[]).find(function(i){return String(i.id)===String(productoId)});
+    var cerrada=d.estado==="entregado"||d.estado==="cancelado";
+    return '<div class="admin-delivery-row"><span>'+esc(item&&item.n||productoId)+' · '+(d.tipo==="digital"?"Digital":"Física")+' · '+esc(d.estado)+' · '+esc(d.cantidad)+'</span>'+
+      (cerrada?'':'<button class="btn sm primary" data-delivery="'+esc(d.id)+'" data-kind="'+esc(d.tipo)+'">'+(d.tipo==="digital"?"Confirmar recarga":"Confirmar entrega")+'</button>')+'</div>';
+  }).join("")+'</div>';
 }
 
 function renderSalesChart(){
@@ -651,7 +661,7 @@ function orderRow(o){
     reciboTabla(o)+(ent?'<div class="meta">'+ent+'</div>':'')+
     (o.idJuego?'<div class="meta">ID de Free Fire para puntos: <b>'+esc(o.idJuego)+'</b></div>':'')+
     (o.cuenta?'<div class="cuenta">Cuenta a recargar — ID: <b>'+esc(o.cuenta.id)+'</b> • Nombre: <b>'+esc(o.cuenta.nombre)+'</b></div>':'')+
-    adminDigitalDataHtml(o)+'<div class="meta">'+esc(o.pago||"Pago")+(o.referencia?' · Ref: '+esc(o.referencia):'')+(o.cupon?' · Cupón '+esc(o.cupon):'')+' · <b>'+fmt.format(Number(o.total)||0)+'</b></div>'+adminAbonosHtml(o)+
+    adminDigitalDataHtml(o)+'<div class="meta">'+esc(o.pago||"Pago")+(o.referencia?' · Ref: '+esc(o.referencia):'')+(o.cupon?' · Cupón '+esc(o.cupon):'')+' · <b>'+fmt.format(Number(o.total)||0)+'</b></div>'+adminPagoHtml(o)+
     (!o.pagoRegistro&&safeImg(o.comprobante)?'<img class="comp" src="'+safeImg(o.comprobante)+'" alt="Comprobante de pago" title="Clic para ampliar">':'')+
     adminEntregasHtml(o)+history+'<div class="acts" style="flex-wrap:wrap">'+b+'</div></article>';
 }

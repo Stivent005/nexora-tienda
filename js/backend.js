@@ -401,6 +401,17 @@ var Backend=(function(){
     });
   }
 
+  function listarEntregasExistentes(entregas,ultimoId){
+    var path="/rest/v1/pedido_entregas?select=id,pedido_id,producto_id,tipo,cantidad,estado,datos_entrega&order=id.asc";
+    if(ultimoId!=null)path+="&id=gt."+encodeURIComponent(ultimoId);
+
+    return call("GET",path).then(function(filas){
+      if(!filas.length)return entregas;
+      filas.forEach(function(fila){entregas.push(fila);});
+      return listarEntregasExistentes(entregas,filas[filas.length-1].id);
+    });
+  }
+
   function aplicarRespuestaPedido(o,r){
 
     if(!r||!r.id)
@@ -1032,13 +1043,13 @@ var Backend=(function(){
          * Supabase los recalcula.
          */
 
+        var clavePedido=String(
+          o.idempotencyKey||o.id||
+          ("nexora-"+Date.now()+"-"+Math.random().toString(36).slice(2))
+        );
         var datosPedido={
-          idempotencyKey:String(
-            o.idempotencyKey||
-            (
-              "nexora-"+Date.now()+"-"+Math.random()
-            )
-          ),
+          id:clavePedido,
+          idempotencyKey:clavePedido,
 
           items:Array.isArray(o.items)
             ?o.items.map(function(item){
@@ -1055,7 +1066,8 @@ var Backend=(function(){
                         1
                       )
                     )
-                  )
+                  ),
+                  digitalData:item.digitalData||{}
                 };
             })
             :[],
@@ -1082,8 +1094,20 @@ var Backend=(function(){
 
           entrega:o.entrega||{},
 
+          cupon:String(o.cupon||""),
+
           pago:String(
             o.pago||""
+          ),
+
+          pagoId:String(o.pagoId||""),
+
+          referencia:String(
+            o.referencia||""
+          ).trim(),
+
+          comprobante:String(
+            o.comprobante||""
           )
         };
 
@@ -1167,18 +1191,31 @@ var Backend=(function(){
         {}
       );
 
+      var entregaReq=rpcChecked(
+        "admin_listar_entregas_pedidos",
+        {}
+      ).catch(function(e){
+        if(e.code!=="PGRST202")throw e;
+        return listarEntregasExistentes([]);
+      });
+
       return Promise.all([
         pedidoReq,
-        pagoReq
+        pagoReq,
+        entregaReq
       ]).then(function(result){
 
         var pedidos=(result[0]||[]).map(normalizarPedido);
         var pagos=Array.isArray(result[1])?result[1]:[];
+        var entregas=Array.isArray(result[2])?result[2]:[];
 
         pedidos.forEach(function(o){
 
           o.abonos=[];
-          o.entregas=[];
+
+          o.entregas=entregas.filter(function(d){
+            return String(d.pedido_id)===String(o.id);
+          });
 
           var registro=pagos.find(function(p){
             return String(p.pedido_id)===String(o.id);
