@@ -203,13 +203,20 @@ function revisarReintegro(id,aprobar,pedidoId){
 
 
 function actualizarEntrega(id,tipo){
-  if(!window.confirm(
-    tipo==="digital"
-      ?"¿Confirmas que completaste la recarga digital?"
-      :"¿Confirmas que entregaste este producto?"
-  ))return;
+  var datos={};
+  if(tipo==="digital"){
+    var confirmacion=window.prompt("Escribe la referencia o confirmación de la recarga digital para guardarla en el pedido:");
+    if(confirmacion===null)return;
+    confirmacion=confirmacion.trim();
+    if(confirmacion.length<3){
+      ordersErr="La confirmación de la recarga debe tener al menos 3 caracteres.";
+      renderAdmin();
+      return;
+    }
+    datos.confirmacion=confirmacion;
+  }else if(!window.confirm("¿Confirmas que entregaste este producto?"))return;
 
-  Backend.actualizarEntrega(id,"entregado",{})
+  Backend.actualizarEntrega(id,"entregado",datos)
     .then(cargarPedidos)
     .catch(function(e){
       ordersErr="No se pudo actualizar la entrega: "+e.message;
