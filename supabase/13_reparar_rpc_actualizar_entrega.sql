@@ -35,7 +35,13 @@ begin
   if v_p.estado not in ('Pagado', 'Entregado') then
     return jsonb_build_object('error', 'No se entrega ningún producto antes de cubrir el saldo del pedido.');
   end if;
-  if v_p.total_validado is null then
+  -- Algunas bases aún tienen el esquema anterior, sin la columna opcional
+  -- total_validado. Usa el total validado cuando exista y, si no, el total
+  -- que guarda el pedido en datos. Evita acceder directamente al campo ausente.
+  if coalesce(
+       nullif(to_jsonb(v_p)->>'total_validado', ''),
+       nullif(v_p.datos->>'total', '')
+     ) is null then
     return jsonb_build_object('error', 'Reconcilia primero el total del pedido histórico.');
   end if;
   if exists (
