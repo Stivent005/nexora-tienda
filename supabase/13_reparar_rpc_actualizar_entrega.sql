@@ -2,6 +2,16 @@
 -- Reutiliza la lógica vigente de 05_seguridad_compras_pagos.sql sin cambiarla.
 begin;
 
+-- Completa columnas auxiliares que faltan en tablas de entregas heredadas.
+alter table public.pedido_entregas
+  add column if not exists datos_entrega jsonb not null default '{}'::jsonb;
+alter table public.pedido_entregas
+  add column if not exists actualizado_por uuid references auth.users(id) on delete set null;
+alter table public.pedido_entregas
+  add column if not exists creado timestamptz not null default now();
+alter table public.pedido_entregas
+  add column if not exists actualizado timestamptz not null default now();
+
 -- Quita firmas antiguas para que la RPC no tenga overloads ambiguos.
 drop function if exists public.admin_actualizar_entrega(bigint, text);
 drop function if exists public.admin_actualizar_entrega(bigint, text, jsonb);
