@@ -1466,15 +1466,15 @@ var Backend=(function(){
       id,
       estado,
       datos
-    ){
+    )
+    {
 
       return rpcChecked(
-        "admin_actualizar_entrega",
-        {
-          p_entrega_id:Number(id),
-          p_estado:String(estado),
-          p_datos_entrega:datos||{}
-        }
+  "admin_actualizar_entrega",
+  {
+    p_entrega_id:Number(id),
+    p_estado:String(estado)
+  }
       );
     },
 
