@@ -1,5 +1,5 @@
--- Repara la firma RPC de entregas que PostgREST no encuentra.
--- Reutiliza la lógica vigente de 05_seguridad_compras_pagos.sql sin cambiarla.
+-- Repara la RPC de entregas para una base que aún tiene el esquema heredado.
+-- Conserva las validaciones de entrega; no altera funciones ni datos de pagos.
 begin;
 
 -- Completa columnas auxiliares que faltan en tablas de entregas heredadas.
