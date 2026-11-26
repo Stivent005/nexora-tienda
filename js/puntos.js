@@ -15,31 +15,22 @@ function ptsCfg() {
 
   return {
     cada: Number(p.cada) || 0,
-    objetivo: Number(p.objetivo) || 0
+    objetivo: Number(p.objetivo) || 0,
+    porCompra: Number(p.por_compra) || 0,
+    bienvenida: Number(p.bienvenida) || 0,
+    activa: p.activa === true
   };
 }
 
-function ruletaOn() {
+function puntosProgramaOn() {
   var c = ptsCfg();
-
-  return REMOTO &&
-    c.cada > 0 &&
-    c.objetivo > 0 &&
-    Array.isArray(cfg.ruleta) &&
-    cfg.ruleta.length >= 2;
+  return REMOTO && c.activa;
 }
 
 function ptsAviso(total, promocionFF) {
-  if (!promocionFF || !ruletaOn()) return "";
+  if (!promocionFF || !puntosProgramaOn()) return "";
 
-  var c = ptsCfg();
-  var g = Math.floor(Number(total) / c.cada);
-
-  return '<p class="meta">🎁 ' +
-    (g > 0
-      ? 'Tras confirmar el pago, el programa calculará los puntos que correspondan. '
-      : '') +
-    'El saldo y el historial están protegidos: el ID de juego por sí solo no autoriza una consulta.</p>';
+  return '<p class="meta">🎁 Los puntos de compras se acreditan a la cuenta Nexora autenticada cuando se confirma el pago. El ID de Free Fire es solo un dato de entrega y no permite consultar el saldo.</p>';
 }
 
 var COLORES = [
@@ -115,87 +106,60 @@ function ptsRevisaPin(texto) {
 
 function abrirPuntos() {
   var b = $("dbox");
-
-  if (!ruletaOn()) {
-    b.innerHTML =
-      '<h2>🎁 Mis puntos</h2>' +
-      '<p class="meta">El programa de puntos aún no está disponible.</p>' +
-      '<div class="foot">' +
-        '<button class="btn" data-x="close">Cerrar</button>' +
-      '</div>';
-
-    $("dlg").showModal();
-    return;
-  }
-
-  if (!PUNTOS_PRIVADOS_AUTENTICADOS) {
-    b.innerHTML =
-      '<h2>🎁 Mis puntos</h2>' +
-      '<p class="msg" role="status">La consulta de saldo e historial está temporalmente protegida. El ID de Free Fire identifica la cuenta del juego, pero no demuestra que quien consulta sea su titular. El acceso se habilitará cuando exista autenticación privada verificada.</p>' +
-      '<div class="foot"><button class="btn" data-x="close">Cerrar</button></div>';
-    $("dlg").showModal();
-    return;
-  }
-
-  var c = ptsCfg();
-  var sd = Cookies.ok("preferencias")
-    ? lsGet("tienda_datos", {})
-    : {};
-
-  rueda.cuenta = null;
-  rueda.pin = null;
-  rueda.pend = null;
-  rueda.olvido = false;
-
-  b.innerHTML =
-    '<h2>🎁 Mis puntos</h2>' +
-    '<p class="meta">Ganas <b>1 punto por cada ' +
-      fmt.format(c.cada) +
-    '</b> de tus compras pagadas. Para consultar el saldo se requerirá una sesión verificada del titular; el ID de Free Fire solo identifica la cuenta del juego. ' +
-    'Los canjes y giros seguirán requiriendo un PIN y autorización del servidor.</p>' +
-
-    '<div class="f">' +
-      '<div class="form-field" id="grp-pt-ff">' +
-        '<label class="field-label" for="pt-ff">ID de jugador Free Fire *</label>' +
-        '<div class="input-wrap">' +
-          '<input id="pt-ff" inputmode="numeric" maxlength="20" ' +
-            'autocomplete="off" placeholder="Ej: 123456789 (solo números)" ' +
-            'value="' + esc(sd.ff || "") + '">' +
-          '<span class="field-icon" aria-hidden="true"></span>' +
-        '</div>' +
-        '<div class="field-msg"></div>' +
-      '</div>' +
-    '</div>' +
-
-    '<div class="err" id="pt-err"></div>' +
-
-    '<div class="foot">' +
-      '<button class="btn" data-x="close">Cerrar</button>' +
-      '<button class="btn primary" id="pt-ver">Ver mis puntos</button>' +
-    '</div>';
-
-  var ptFF = $("pt-ff");
-  if (ptFF) {
-    var valPtFF = function() {
-      var v = ptsSoloNum(ptFF.value);
-      if (!ptFF.value.trim()) setFieldValidation(ptFF, false, "Ingresa tu ID de jugador Free Fire");
-      else if (v.length < 6 || v.length > 15) setFieldValidation(ptFF, false, "El ID debe tener entre 6 y 15 números");
-      else setFieldValidation(ptFF, true, "", "ID válido");
-    };
-    ptFF.addEventListener("input", valPtFF);
-    ptFF.addEventListener("blur", valPtFF);
-    if (ptFF.value.trim()) valPtFF();
-  }
-
-  $("pt-ver").addEventListener("click", function () {
-    verPuntos();
-  });
-
-  $("pt-ff").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") verPuntos();
-  });
-
   $("dlg").showModal();
+  if (!Backend.accountsReady || !Backend.customer()) {
+    b.innerHTML = '<h2>🎁 Mis puntos</h2>' +
+      '<p class="meta">El saldo se consulta con la cuenta autenticada de Nexora. El ID de Free Fire no sirve para iniciar sesión ni consultar puntos.</p>' +
+      '<div class="foot"><button class="btn" data-x="close">Cerrar</button>' +
+      (Backend.accountsReady ? '<button class="btn primary" id="pt-auth">Iniciar sesión / crear cuenta</button>' : '') + '</div>';
+    var authButton = $("pt-auth");
+    if (authButton) authButton.addEventListener("click", function () {
+      $("dlg").close();
+      abrirCuenta(false);
+    });
+    return;
+  }
+  b.innerHTML = '<h2>🎁 Mis puntos</h2><p class="meta" role="status">Consultando tu saldo e historial…</p>' +
+    '<div class="foot"><button class="btn" data-x="close">Cerrar</button></div>';
+  cargarPuntosCliente();
+}
+
+function fechaMovimientoPuntos(valor) {
+  var d = new Date(valor);
+  return isNaN(d.getTime()) ? "" : d.toLocaleString("es-CO", {dateStyle:"medium",timeStyle:"short"});
+}
+
+function pintarPuntosCliente(datos, aviso) {
+  var b = $("dbox"), p = datos || {}, movimientos = Array.isArray(p.movimientos) ? p.movimientos : [], premios = Array.isArray(p.premios) ? p.premios : [];
+  var nombreMotivo = {compra:"Compra", bienvenida:"Bonificación de bienvenida", reversa_compra:"Reversión de compra", canje:"Canje", canje_cancelado:"Canje devuelto"};
+  var html = '<h2>🎁 Mis puntos</h2>' + (aviso ? '<p class="account-note" role="status">'+esc(aviso)+'</p>' : '');
+  html += '<div class="box"><div class="meta">Saldo disponible</div><strong style="font-size:2rem">'+esc(p.puntos|0)+' puntos</strong>'+
+    (p.activa ? '<p class="meta">Ganas '+esc(p.por_compra|0)+' puntos por compra y '+(p.cada>0?'1 punto por cada '+esc(fmt.format(p.cada))+' pagados.':'sin bonificación por monto configurada.')+'</p>' : '<p class="meta">El programa está pausado. Tu saldo e historial siguen disponibles.</p>')+'</div>';
+  if (p.activa && premios.length) html += '<div class="bar"><b>Premios disponibles</b></div><div class="list">'+premios.map(function(x){
+    return '<div class="row ptsl"><span><b>'+esc(x.nombre)+'</b><span class="meta">'+esc(x.descripcion||'')+' · '+esc(x.costo)+' puntos'+(x.disponible?'':' · agotado')+'</span></span>'+
+      '<button class="btn sm" data-puntos-canje="'+esc(x.id)+'"'+(x.disponible&&(p.puntos|0)>=(x.costo|0)?'':' disabled')+'>Canjear</button></div>';
+  }).join('')+'</div>';
+  var canjes = Array.isArray(p.canjes) ? p.canjes : [];
+  if(canjes.length) html += '<div class="bar"><b>Mis canjes</b></div><div class="list">'+canjes.map(function(c){return '<div class="row ptsl"><span><b>'+esc(c.nombre)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(c.creado))+' · '+esc(c.costo)+' pts</span></span><span class="tag'+(c.estado==='entregado'?'':' off')+'">'+esc(c.estado)+'</span></div>';}).join('')+'</div>';
+  html += '<div class="bar"><b>Historial</b></div>'+(movimientos.length?'<div class="list">'+movimientos.map(function(m){var n=m.cantidad|0;return '<div class="row ptsl"><span><b>'+esc(nombreMotivo[m.motivo]||m.motivo)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(m.creado))+(m.referencia?' · '+esc(m.referencia):'')+'</span></span><b>'+(n>0?'+':'')+esc(n)+'</b></div>';}).join('')+'</div>':'<div class="empty"><p>Aún no hay movimientos.</p></div>')+
+    '<div class="foot"><button class="btn" data-x="close">Cerrar</button><button class="btn" id="pt-refresh">Actualizar</button></div>';
+  b.innerHTML = html;
+  var refresh = $("pt-refresh");
+  if (refresh) refresh.addEventListener("click", cargarPuntosCliente);
+  b.querySelectorAll("[data-puntos-canje]").forEach(function(button){button.addEventListener("click",function(){canjearPuntosCliente(button.getAttribute("data-puntos-canje"));});});
+}
+
+function cargarPuntosCliente(aviso) {
+  if (!Backend.customer()) return Promise.resolve(false);
+  return Backend.misPuntosCliente().then(function(datos){pintarPuntosCliente(datos,aviso);return datos;})
+    .catch(function(e){var b=$("dbox");b.innerHTML='<h2>🎁 Mis puntos</h2><p class="err" role="alert">'+esc(e&&e.message||"No se pudieron consultar los puntos.")+'</p><div class="foot"><button class="btn" data-x="close">Cerrar</button><button class="btn" id="pt-refresh">Reintentar</button></div>';$("pt-refresh").addEventListener("click",function(){cargarPuntosCliente();});return false;});
+}
+
+function canjearPuntosCliente(id) {
+  if (!window.confirm("¿Confirmas canjear este premio? El saldo y el stock se validan en el servidor.")) return;
+  var clave=ptsClave();
+  Backend.canjearPuntosCliente(id,clave).then(function(r){return cargarPuntosCliente(r&&r.nombre?"Canje registrado: "+r.nombre:"Canje registrado.");})
+    .catch(function(e){cargarPuntosCliente(e&&e.message||"No se pudo completar el canje.");});
 }
 
 /* ==========================================

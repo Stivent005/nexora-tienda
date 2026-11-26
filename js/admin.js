@@ -6,7 +6,7 @@ var adminPaymentFilter="";
 var ordersLoading=false;
 var ADMIN_NAV=[
   ["dashboard","Resumen","▦"],["products","Productos","▣"],["orders","Pedidos","▤"],
-  ["pay","Pagos","＄"],["customers","Clientes","♙"],["loyalty","Puntos y ruleta","✦"],
+  ["pay","Pagos","＄"],["customers","Clientes","♙"],["loyalty","Puntos y recompensas","✦"],
   ["coupons","Cupones","％"],["settings","Ajustes","⚙"],["backup","Respaldo","⇧"],
   ["security","Acceso y roles","⌑"]
 ];
@@ -748,19 +748,17 @@ function saveMetodo(){
   $("dlg").close();svm(ms);
 }
 
-/* ---------- Puntos, canjes y ruleta (administración) ----------
-   La cuenta de puntos de cada cliente es su ID de Free Fire. Los puntos se suman y restan SOLOS en la base de datos
-   al cambiar el estado de un pedido. La ruleta se sortea en la base de datos con las probabilidades de aquí;
-   la base de datos valida y rechaza lo que no sea correcto (probabilidades enteras que suman exactamente 100 %). */
+/* ---------- Puntos y recompensas (administración) ----------
+   Los saldos nuevos pertenecen a UID autenticados; el cliente no puede asignarlos. */
 var TIPOS_PREMIO=[["puntos","Puntos extra"],["pct","% de descuento (cupón)"],["fijo","Descuento fijo $ (cupón)"],["manual","Premio manual (lo entregas tú)"],["nada","Sin premio"]];
 var LOY=null;
 function loyIni(){
   var P=cfg.pts||{};
-  LOY={cada:Number(P.cada)||2000,obj:Number(P.objetivo)||50,ruleta:[],premios:[],canjes:[],clientes:[],giros:[],borrados:[],msg:"",msgR:"",msgP:"",msgC:"",cargando:true};
+  LOY={activa:P.activa===true,cada:P.cada==null?2000:(Number(P.cada)||0),porCompra:Number(P.por_compra)||0,bienvenida:Number(P.bienvenida)||0,obj:Number(P.objetivo)||50,ruleta:[],premios:[],canjes:[],clientes:[],giros:[],borrados:[],msg:"",msgR:"",msgP:"",msgC:"",cargando:true};
 }
 function loyLeer(){
   if(!LOY||!$("l-cada"))return;
-  LOY.cada=Number($("l-cada").value)||0;LOY.obj=Number($("l-obj").value)||0;
+  LOY.activa=$("l-activa").checked;LOY.cada=Number($("l-cada").value)||0;LOY.porCompra=Number($("l-compra").value)||0;LOY.bienvenida=Number($("l-bienvenida").value)||0;LOY.obj=Number($("l-obj").value)||0;
   document.querySelectorAll("[data-lr]").forEach(function(tr){var p=LOY.ruleta[Number(tr.dataset.lr)];if(!p)return;
     p.nombre=tr.querySelector(".l-n").value.trim();p.tipo=tr.querySelector(".l-t").value;p.valor=tr.querySelector(".l-v").value.trim();
     p.peso=tr.querySelector(".l-p").value.trim();p.stock=tr.querySelector(".l-s").value.trim();p.activo=tr.querySelector(".l-a").checked});
@@ -774,23 +772,24 @@ function cargarLoy(){
       LOY.ruleta=(r[0]||[]).map(function(x){return{id:x.id,nombre:x.nombre||"",descripcion:x.descripcion||"",tipo:x.tipo||"nada",valor:x.valor==null?"":String(x.valor),peso:String(x.peso==null?0:x.peso),stock:x.stock==null?"":String(x.stock),activo:x.activo!==false}});
       LOY.premios=(r[1]||[]).map(function(x){return{id:x.id,nombre:x.nombre||"",descripcion:x.descripcion||"",costo:String(x.costo_puntos==null?"":x.costo_puntos),stock:x.stock==null?"":String(x.stock),activo:x.activo!==false}});
       LOY.canjes=r[2]||[];LOY.clientes=r[3]||[];LOY.giros=r[4]||[];LOY.borrados=[];LOY.cargando=false;renderAdmin()})
-    .catch(function(e){LOY.cargando=false;LOY.msg="No se pudieron leer los datos: "+e.message+" (¿ejecutaste supabase/schema_3_puntos_ff.sql?)";renderAdmin()});
+    .catch(function(e){LOY.cargando=false;LOY.msg="No se pudieron leer los datos: "+e.message+" (¿ejecutaste scripts/supabase/18_puntos_clientes_auth.sql?)";renderAdmin()});
 }
 function loySuma(){return LOY.ruleta.reduce(function(a,p){var n=Math.floor(Number(p.peso));return a+(p.activo&&n>0?n:0)},0)}
 function renderLoyalty(h){
   if(!Backend.remote){$("panel").innerHTML=adminFrame(h+'<div class="msg">Los puntos y la ruleta necesitan la base de datos. Sigue TUTORIAL_BASE_DE_DATOS.md.</div>');return}
   if(!LOY){loyIni();cargarLoy()}
   var suma=loySuma(),ok100=suma===100,fecha=function(t){var d=new Date(t);return isNaN(d.getTime())?"":d.toLocaleString("es-CO")};
-  h+='<div class="box" style="padding:0;max-width:900px"><p class="meta">El <b>ID de Free Fire identifica la cuenta del juego, no verifica la identidad del titular</b>. La consulta pública de saldo e historial está pausada hasta implementar autenticación privada en servidor. Los cambios de roles, acceso administrativo y operaciones de puntos deben verificarse en Supabase antes de habilitarse.</p><p class="meta">Los puntos solo se registran tras confirmar el pago, y se deben revertir al cancelar conforme a las reglas y RPC aprobadas.</p>'
-   +'<div class="two"><label>Pesos por cada punto (COP)<input id="l-cada" type="number" min="1" step="100" value="'+esc(LOY.cada)+'"></label><label>Puntos que cuesta cada giro<input id="l-obj" type="number" min="1" step="1" value="'+esc(LOY.obj)+'"></label></div>'
+  h+='<div class="box" style="padding:0;max-width:900px"><p class="meta">El saldo y el historial se asocian al UID autenticado de Supabase. El ID de Free Fire no es una credencial. Los pedidos invitados no generan puntos; las compras de una cuenta los generan al confirmar el pago. Los saldos antiguos por ID/PIN no se reasignan automáticamente.</p>'
+   +'<label class="chk"><input id="l-activa" type="checkbox"'+(LOY.activa?' checked':'')+'> Activar programa de puntos</label>'
+   +'<div class="two"><label>Puntos por compra pagada<input id="l-compra" type="number" min="0" max="100000" step="1" value="'+esc(LOY.porCompra)+'"></label><label>Puntos por cada monto gastado (COP)<input id="l-cada" type="number" min="0" step="100" value="'+esc(LOY.cada)+'"></label><label>Puntos de bienvenida (una sola vez)<input id="l-bienvenida" type="number" min="0" max="100000" step="1" value="'+esc(LOY.bienvenida)+'"></label><label>Umbral de ruleta heredada<input id="l-obj" type="number" min="1" step="1" value="'+esc(LOY.obj)+'" disabled></label></div>'
    +'<div class="foot"><span class="meta" id="lmsg-cfg">'+esc(LOY.msg)+'</span><button class="btn primary" id="l-cfg">Guardar configuración</button></div></div>';
 
-  h+='<div class="bar"><b>Premios de la ruleta</b></div><div class="box" style="padding:0;max-width:900px"><p class="meta">Escribe la <b>probabilidad en % (número entero)</b> de cada premio. Los premios <b>activos deben sumar exactamente 100 %</b> (entre 2 y 12 premios). Stock vacío = ilimitado; si un premio se agota, su parte se reparte entre los demás. El sorteo lo hace la base de datos.</p>'
+  h+='<div class="bar"><b>Configuración heredada de ruleta (desactivada para cartera Auth)</b></div><div class="box" style="padding:0;max-width:900px"><p class="meta">La ruleta anterior dependía de Free Fire ID y PIN. Sus RPC de cliente están revocadas; estos ajustes se conservan por compatibilidad y no se ofrecen en la nueva cuenta. Los premios canjeables de abajo sí funcionan con saldo Auth.</p>'
    +(LOY.cargando?'<div class="meta">Cargando…</div>':'')
    +LOY.ruleta.map(function(p,i){return'<div class="row" data-lr="'+i+'" style="display:grid;grid-template-columns:2fr 1.7fr 1fr .8fr .9fr auto auto;gap:6px;align-items:center"><input class="l-n" aria-label="Nombre del premio" maxlength="30" placeholder="Nombre" value="'+esc(p.nombre)+'"><select class="l-t" aria-label="Tipo del premio">'+TIPOS_PREMIO.map(function(t){return'<option value="'+t[0]+'"'+(p.tipo===t[0]?' selected':'')+'>'+t[1]+'</option>'}).join("")+'</select><input class="l-v" aria-label="Valor del premio" placeholder="Valor" '+(p.tipo==="nada"?"disabled ":"")+'value="'+esc(p.tipo==="nada"?"":p.valor)+'"><input class="l-p" aria-label="Probabilidad del premio en porcentaje" type="number" min="0" max="100" step="1" placeholder="%" title="Probabilidad en %" value="'+esc(p.peso)+'"><input class="l-s" aria-label="Stock del premio" type="number" min="0" step="1" placeholder="Stock" title="Vacío = ilimitado" value="'+esc(p.stock)+'"><label class="meta" style="white-space:nowrap"><input class="l-a" type="checkbox"'+(p.activo?' checked':'')+'> activo</label><button class="btn sm danger" data-lx="'+i+'" aria-label="Quitar premio">Quitar</button></div>'}).join("")
    +'<div class="foot"><span class="meta" id="lmsg-r" style="'+(ok100?'':'color:#e0457b;font-weight:700')+'">Suma de activos: '+suma+' %'+(ok100?' ✓':' (debe ser 100)')+(LOY.msgR?' • '+esc(LOY.msgR):'')+'</span><button class="btn" id="l-norm" title="Reparte las probabilidades de los premios activos para que sumen 100 %, manteniendo su proporción">Ajustar a 100 %</button><button class="btn" id="l-add">Agregar premio</button><button class="btn primary" id="l-save">Guardar ruleta</button></div></div>';
 
-  h+='<div class="bar"><b>Premios que se canjean con puntos</b></div><div class="box" style="padding:0;max-width:900px"><p class="meta">El cliente los canjea con su PIN. El costo y el stock se leen siempre de la base de datos. Stock vacío = ilimitado.</p>'
+  h+='<div class="bar"><b>Premios que se canjean con puntos</b></div><div class="box" style="padding:0;max-width:900px"><p class="meta">El cliente autenticado canjea desde su propia cartera. El costo y el stock se leen y validan siempre en la base de datos. Stock vacío = ilimitado.</p>'
    +LOY.premios.map(function(p,i){return'<div class="row" data-lp="'+i+'" style="display:grid;grid-template-columns:1.6fr 2fr .8fr .8fr auto auto auto;gap:6px;align-items:center"><input class="p-n" aria-label="Nombre del premio canjeable" maxlength="60" placeholder="Nombre" value="'+esc(p.nombre)+'"><input class="p-d" aria-label="Descripción del premio canjeable" maxlength="200" placeholder="Descripción" value="'+esc(p.descripcion)+'"><input class="p-c" aria-label="Costo del premio en puntos" type="number" min="1" step="1" placeholder="Puntos" value="'+esc(p.costo)+'"><input class="p-s" aria-label="Stock del premio canjeable" type="number" min="0" step="1" placeholder="Stock" value="'+esc(p.stock)+'"><label class="meta" style="white-space:nowrap"><input class="p-a" type="checkbox"'+(p.activo?' checked':'')+'> activo</label><button class="btn sm primary" data-ps="'+i+'">Guardar</button><button class="btn sm danger" data-pd="'+i+'">Borrar</button></div>'}).join("")
    +(LOY.premios.length||LOY.cargando?'':'<div class="meta">Aún no hay premios canjeables.</div>')
    +'<div class="foot"><span class="meta" id="lmsg-p">'+esc(LOY.msgP)+'</span><button class="btn" id="p-add">Agregar premio canjeable</button></div></div>';
@@ -798,11 +797,11 @@ function renderLoyalty(h){
   var pend=LOY.canjes.filter(function(c){return c.estado==="pendiente"}),resto=LOY.canjes.filter(function(c){return c.estado!=="pendiente"}).slice(0,15);
   h+='<div class="bar"><b>Canjes y premios por entregar ('+pend.length+')</b><button class="btn" id="l-ref">Actualizar</button></div>'
    +(LOY.msgC?'<div class="meta">'+esc(LOY.msgC)+'</div>':'')
-   +(pend.length?'<div class="list">'+pend.map(function(c){return'<div class="row line"><span><b>'+esc(c.nombre)+'</b> <span class="meta">ID Free Fire '+esc(c.ff_id)+' • '+(c.origen==="ruleta"?"ruleta":esc(c.costo)+" pts")+' • '+esc(fecha(c.creado))+'</span></span><span><button class="btn sm primary" data-ce="'+esc(c.id)+'" data-est="entregado">Entregado</button> <button class="btn sm danger" data-ce="'+esc(c.id)+'" data-est="cancelado">Cancelar</button></span></div>'}).join("")+'</div>':'<div class="empty"><p>No hay canjes pendientes.</p></div>')
+   +(pend.length?'<div class="list">'+pend.map(function(c){return'<div class="row line"><span><b>'+esc(c.nombre)+'</b> <span class="meta">'+(c.user_id?'Cuenta '+esc(String(c.user_id).slice(0,8)):'ID Free Fire '+esc(c.ff_id||'—'))+' • '+(c.origen==="ruleta"?"ruleta":esc(c.costo)+" pts")+' • '+esc(fecha(c.creado))+'</span></span><span><button class="btn sm primary" data-ce="'+esc(c.id)+'" data-est="entregado">Entregado</button> <button class="btn sm danger" data-ce="'+esc(c.id)+'" data-est="cancelado">Cancelar</button></span></div>'}).join("")+'</div>':'<div class="empty"><p>No hay canjes pendientes.</p></div>')
    +(resto.length?'<div class="list">'+resto.map(function(c){return'<div class="row line"><span>'+esc(c.nombre)+' <span class="meta">ID '+esc(c.ff_id)+' • '+esc(fecha(c.creado))+'</span></span><span class="tag'+(c.estado==="entregado"?"":" off")+'">'+esc(c.estado)+'</span></div>'}).join("")+'</div>':'');
 
-  h+='<div class="bar"><b>Clientes con puntos (ID de Free Fire)</b></div>'
-   +(LOY.clientes.length?'<div class="list">'+LOY.clientes.map(function(c){return'<div class="row line"><span>'+esc(c.ff_id)+' <span class="meta">'+(c.pin_definido?"con PIN":"sin PIN todavía")+'</span></span><span class="meta">'+esc(c.total_ganado)+' ganados</span><b>'+esc(c.puntos)+' pts</b></div>'}).join("")+'</div>':'<div class="empty"><p>'+(LOY.cargando?"Cargando…":"Aún no hay cuentas. Se crean cuando un cliente se registra o cuando confirmas el pago de un pedido con ID de Free Fire.")+'</p></div>')
+  h+='<div class="bar"><b>Cuentas cliente con puntos</b></div>'
+   +(LOY.clientes.length?'<div class="list">'+LOY.clientes.map(function(c){return'<div class="row line"><span>Cuenta <span class="meta">UID '+esc(c.user_id)+'</span></span><span class="meta">'+esc(c.total_ganado)+' ganados</span><b>'+esc(c.puntos)+' pts</b></div>'}).join("")+'</div>':'<div class="empty"><p>'+(LOY.cargando?"Cargando…":"Aún no hay carteras de puntos asociadas a cuentas.")+'</p></div>')
    +(LOY.giros.length?'<div class="bar"><b>Últimos giros de la ruleta</b></div><div class="list">'+LOY.giros.map(function(g){return'<div class="row line"><span><b>'+esc(g.premio)+'</b> <span class="meta">ID '+esc(g.ff_id)+' • '+esc(fecha(g.creado))+'</span></span><span class="meta">costó '+esc(g.costo)+' pts'+(g.puntos_ganados>0?' • +'+esc(g.puntos_ganados):'')+'</span></div>'}).join("")+'</div>':'');
   $("panel").innerHTML=adminFrame(h);
 
@@ -826,10 +825,12 @@ function renderLoyalty(h){
 
   $("l-cfg").addEventListener("click",function(){
     loyLeer();var L=LOY,m=function(t){L.msg=t;$("lmsg-cfg").textContent=t};
-    if(!(L.cada>=1)||!(L.obj>=1))return m("Revisa los pesos por punto y los puntos por giro (mínimo 1).");
+    if(L.cada<0||L.porCompra<0||L.bienvenida<0||L.porCompra>100000||L.bienvenida>100000)return m("Revisa las reglas: usa cantidades enteras no negativas y máximo 100.000 puntos.");
+    if(L.activa&&L.cada===0&&L.porCompra===0&&L.bienvenida===0)return m("Configura al menos una regla de puntos antes de activar el programa.");
     m("Guardando…");
-    Backend.guardarAjuste("puntos",{cada:Math.floor(L.cada),objetivo:Math.floor(L.obj)})
-      .then(function(){cfg.pts={cada:Math.floor(L.cada),objetivo:Math.floor(L.obj)};m("Guardado.")})
+    var nuevo={activa:L.activa,cada:Math.floor(L.cada),por_compra:Math.floor(L.porCompra),bienvenida:Math.floor(L.bienvenida),objetivo:Math.floor(L.obj)};
+    Backend.guardarAjuste("puntos",nuevo)
+      .then(function(){cfg.pts=nuevo;m("Guardado.")})
       .catch(function(e){m("No se pudo guardar: "+e.message)});
   });
 

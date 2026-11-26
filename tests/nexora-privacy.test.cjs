@@ -6,33 +6,32 @@ const vm = require("node:vm");
 
 const pointsSource = fs.readFileSync(path.join(__dirname, "../js/puntos.js"), "utf8");
 
-test("el texto de cuenta nunca promete acceso privado usando solo el ID de juego", () => {
-  assert.doesNotMatch(pointsSource, /entra solo con tu <b>ID de Free Fire/i);
-  assert.match(pointsSource, /se requerirá una sesión verificada del titular/);
-  assert.match(pointsSource, /el ID de Free Fire solo identifica la cuenta del juego/);
-});
-
-test("la tienda informa del cierre de puntos sin pedir el ID ni mostrar saldo/historial", () => {
+test("Mis puntos exige cuenta Auth y no consulta por ID de Free Fire", () => {
   const start = pointsSource.indexOf("function abrirPuntos() {");
-  const end = pointsSource.indexOf("/* ==========================================\n   CONSULTAR CUENTA", start);
+  const end = pointsSource.indexOf("function fechaMovimientoPuntos", start);
   assert.ok(start >= 0 && end > start);
   const box = { innerHTML: "" };
   let opened = false;
   const context = {
-    PUNTOS_PRIVADOS_AUTENTICADOS: false,
-    ruletaOn: () => true,
-    $: (id) => id === "dbox" ? box : { showModal() { opened = true; } }
+    Backend: { accountsReady: true, customer: () => null },
+    $: (id) => id === "dbox" ? box : { showModal() { opened = true; }, addEventListener() {} }
   };
   vm.runInNewContext(pointsSource.slice(start, end) + "\nglobalThis.openPoints=abrirPuntos;", context);
   context.openPoints();
 
   assert.equal(opened, true);
-  assert.match(box.innerHTML, /role="status"/);
-  assert.match(box.innerHTML, /no demuestra que quien consulta sea su titular/);
-  assert.doesNotMatch(box.innerHTML, /id="pt-ff"|consultar_puntos|movimientos|saldo:/i);
+  assert.match(box.innerHTML, /cuenta autenticada de Nexora/);
+  assert.match(box.innerHTML, /ID de Free Fire no sirve/);
+  assert.doesNotMatch(box.innerHTML, /consultar_puntos|p_ff/);
 });
 
-test("las rutas de consulta y recarga no llaman el RPC con autenticación privada desactivada", async () => {
+test("la interfaz de puntos carga y canjea mediante RPC de cuenta", () => {
+  assert.match(pointsSource, /Backend\.misPuntosCliente\(\)/);
+  assert.match(pointsSource, /Backend\.canjearPuntosCliente\(id,clave\)/);
+  assert.doesNotMatch(pointsSource.slice(pointsSource.indexOf("function abrirPuntos()"), pointsSource.indexOf("function ptsAplicar")), /consultar_puntos|pt-ff/);
+});
+
+test("las rutas antiguas por ID siguen cerradas en el cliente", async () => {
   let rpcCalls = 0;
   const context = {
     PUNTOS_PRIVADOS_AUTENTICADOS: false,

@@ -14,10 +14,10 @@ function perfilHUD(a,c,pct,puede){
 
 /* Sección RECOMPENSAS de la tienda (shop.js la llama; solo aparece si el programa de puntos está activo) */
 function fxRewards(sec){
-  if(!ruletaOn())return "";
-  var c=ptsCfg(),pr=(cfg.ruleta||[]).map(function(p){return String(p.nombre||"")}).filter(Boolean).slice(0,8);
-  return sec("rew","06","PUNTOS FREE FIRE",'<div class="rw"><div class="rw-l"><span class="rw-k">PROGRAMA DE PUNTOS</span><p>Gana <b>1 punto</b> por cada <b>'+fmt.format(c.cada)+'</b> de tus compras pagadas. Con tu ID de Free Fire consultas tus puntos, canjeas premios y, con <b>'+c.objetivo+' puntos</b>, giras la ruleta.</p><button class="btn primary" data-pts="1">VER MIS PUNTOS</button></div>'
-   +'<div class="rw-r"><span class="rw-k">PREMIOS EN LA RULETA</span><div class="rw-chips">'+pr.map(function(n,i){return '<em style="--i:'+i+'">'+esc(n)+'</em>'}).join("")+'</div></div></div>');
+  if(!puntosProgramaOn())return "";
+  var c=ptsCfg();
+  return sec("rew","06","PUNTOS NEXORA",'<div class="rw"><div class="rw-l"><span class="rw-k">PROGRAMA DE PUNTOS</span><p>Gana '+(c.porCompra>0?'<b>'+c.porCompra+' puntos</b> por compra pagada':'puntos por tus compras pagadas')+(c.cada>0?' y <b>1 punto por cada '+fmt.format(c.cada)+'</b> gastados':'')+'. El saldo se vincula a tu cuenta autenticada de Nexora; el ID de Free Fire solo se usa para identificar la cuenta del juego.</p><button class="btn primary" data-pts="1">VER MIS PUNTOS</button></div>'
+   +'<div class="rw-r"><span class="rw-k">RECOMPENSAS</span><div class="rw-chips"><em>Canjes disponibles en tu cuenta</em></div></div></div>');
 }
 document.addEventListener("click",function(e){if(e.target.closest&&e.target.closest("[data-pts]")&&typeof abrirPuntos==="function")abrirPuntos()});
 

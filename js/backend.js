@@ -656,6 +656,27 @@ var Backend=(function(){
       );
     },
 
+    misPuntosCliente:function(){
+      if(!accountsReady||!customerUser||!token){
+        var authError=new Error("Inicia sesión en tu cuenta para consultar tus puntos.");
+        authError.code="AUTH_REQUIRED";
+        return Promise.reject(authError);
+      }
+      return rpcChecked("mis_puntos_cliente",{});
+    },
+
+    canjearPuntosCliente:function(premio,clave){
+      if(!accountsReady||!customerUser||!token){
+        var authError=new Error("Inicia sesión en tu cuenta para canjear puntos.");
+        authError.code="AUTH_REQUIRED";
+        return Promise.reject(authError);
+      }
+      return rpcChecked("canjear_mis_puntos",{
+        p_premio:Number(premio),
+        p_clave:String(clave||"")
+      });
+    },
+
     procesarPuntosPedido:function(pedidoId){
 
       return call(
@@ -901,16 +922,12 @@ var Backend=(function(){
 
       return call(
         "GET",
-        "/rest/v1/canjes?select=id,ff_id,nombre,costo,origen,estado,creado&order=creado.desc&limit=100"
+        "/rest/v1/canjes?select=id,ff_id,user_id,nombre,costo,origen,estado,creado&order=creado.desc&limit=100"
       );
     },
 
     clientesPuntos:function(){
-
-      return call(
-        "GET",
-        "/rest/v1/puntos?select=ff_id,puntos,total_ganado,pin_definido,actualizado&order=puntos.desc&limit=100"
-      );
+      return rpcChecked("admin_puntos_clientes",{}).then(function(r){return Array.isArray(r)?r:[];});
     },
 
     girosAdmin:function(){
@@ -1043,10 +1060,11 @@ var Backend=(function(){
          * Supabase los recalcula.
          */
 
-        var clavePedido=String(
-          o.idempotencyKey||o.id||
-          ("nexora-"+Date.now()+"-"+Math.random().toString(36).slice(2))
-        );
+        var clavePedido=String(o.idempotencyKey||o.id||"");
+        if(!/^[A-Za-z0-9_-]{8,80}$/.test(clavePedido)){
+          clavePedido="nexora_"+Date.now().toString(36)+"_"+
+            Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+        }
         var datosPedido={
           id:clavePedido,
           idempotencyKey:clavePedido,

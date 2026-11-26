@@ -457,7 +457,7 @@ function validarDatos(L) {
 
   var ffDigits = ptsSoloNum(chk.idJuego);
   if (chk.idJuego.trim() && (ffDigits.length < 6 || ffDigits.length > 15)) {
-    f.push("ID de Free Fire (debe tener entre 6 y 15 números para acumular puntos)");
+    f.push("ID de Free Fire inválido (debe tener entre 6 y 15 números)");
   }
 
   if (hp) {
@@ -825,9 +825,10 @@ function drawCart() {
         $("c-fmsg").textContent = T("pago.procesando");
 
         resizeImg(this.files[0], 900, "image/jpeg", function (u) {
+          if(!u){compImg="";$("c-fmsg").textContent="No se pudo procesar la captura. Prueba con otra imagen.";return;}
           compImg = u;
           $("c-fmsg").textContent = T("pago.capturaLista");
-        });
+        }, 680000);
       });
     }
   }
@@ -860,7 +861,7 @@ function bindCheckoutValidation() {
     } else if (v.length < 6 || v.length > 15) {
       setFieldValidation(ff, false, "El ID de Free Fire debe tener entre 6 y 15 números");
     } else {
-      setFieldValidation(ff, true, "", "ID válido (puntos acumulables)");
+      setFieldValidation(ff, true, "", "ID válido");
     }
   };
 
@@ -1075,11 +1076,19 @@ function sendOrder() {
     btn.disabled = false;
     btn.textContent = T("pago.confirmar");
 
-    if (/referencia de checkout ya se uso/i.test(String(e&&e.message||""))&&typeof clearPendingOrderKey==="function") clearPendingOrderKey();
+    var errorMessage=String(e&&e.message||"");
+    var errorCode=String(e&&e.code||"");
+    if (/referencia de checkout ya se uso/i.test(errorMessage)&&typeof clearPendingOrderKey==="function") clearPendingOrderKey();
 
-    $("err").textContent = /referencia de checkout ya se uso/i.test(String(e&&e.message||""))
-      ? "Tus datos del pedido cambiaron. Confírmalos de nuevo para crear un pedido nuevo."
-      : T(/demasiados/i.test(e && e.message || "")?"pago.errorDemasiados":"pago.errorEnvio");
+    if(/referencia de checkout ya se uso/i.test(errorMessage)){
+      $("err").textContent="Los datos del pedido cambiaron. Confirma de nuevo para crear el pedido.";
+    }else if(errorMessage){
+      $("err").textContent="No se pudo enviar el pedido: "+errorMessage+
+        (errorCode?" ["+errorCode+"]":"")+
+        (e&&e.details?" Detalle: "+e.details:"");
+    }else{
+      $("err").textContent="El checkout fallo sin recibir detalles del servidor. Recarga la tienda e intenta de nuevo.";
+    }
     $("err").focus();
   });
 }

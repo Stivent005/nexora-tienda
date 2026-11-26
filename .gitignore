@@ -49,6 +49,9 @@ limpiar_respaldos.ps1
 *.old
 *.tmp
 
+# Artefacto de publicación reconstruible
+/dist/
+
 
 # Archivo alternativo pendiente de verificar
 js/store_con_id_conectado.js

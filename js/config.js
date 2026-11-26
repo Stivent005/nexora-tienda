@@ -4,7 +4,6 @@ var CONFIG={
   whatsapp:"573026393234",
   nequi:"3026393234",
   banco:"",
-  claveAdmin:"1234",
   moneda:"COP",
 
   supabase:{

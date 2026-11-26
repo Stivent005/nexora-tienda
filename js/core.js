@@ -69,7 +69,7 @@ if(!localDemoPreview&&cart[DEMO_PRODUCT_ID]){delete cart[DEMO_PRODUCT_ID];lsSet(
 var orders=(cfg.supabase&&cfg.supabase.url)?[]:lsGet("tienda_pedidos",[]),coupon=null,newLogo,compImg="",pedidoFiltro="Pendiente",ordersErr="";
 function applyTheme(){var c=cfg.color||"#22d3ee",r=document.documentElement.style,n=parseInt(c.slice(1),16),l=0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255);r.setProperty("--accent",c);r.setProperty("--on-accent",l>150?"#111":"#fff")}
 applyTheme();
-function resizeImg(f,max,type,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL(type,0.8))};im.src=r.result};r.readAsDataURL(f)}
+function resizeImg(f,max,type,cb,maxChars){var r=new FileReader();r.onerror=function(){cb("")};r.onload=function(){var im=new Image();im.onerror=function(){cb("")};im.onload=function(){var k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas"),ctx=c.getContext("2d"),q=0.8,u="";for(var attempt=0;attempt<12;attempt++){c.width=Math.max(1,Math.round(im.width*k));c.height=Math.max(1,Math.round(im.height*k));ctx.drawImage(im,0,0,c.width,c.height);u=c.toDataURL(type,q);if(!maxChars||u.length<=maxChars)break;if(q>0.46)q=Math.max(0.45,q-0.08);else k*=0.82}cb(maxChars&&u.length>maxChars?"":u)};im.src=r.result};r.readAsDataURL(f)}
 var authed=false,cat="",tipoF="",atab="",editing=null,img="",pdel=null,step="cart",pay="contra";
 var favoritos=new Set(NexoraContracts.normalizeFavoriteIds(lsGet("nexora_favoritos",[]))),favoritosSolo=false,favoritosError="";
 function alternarFavorito(id){
@@ -112,7 +112,13 @@ function cargarCatalogo(){
   });
 }
 function eff(p){return p.offer&&p.offerPrice>0?p.offerPrice:p.price}
-function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function uid(){
+  /* La RPC segura admite únicamente caracteres ASCII y claves de 8 a 80. */
+  var cryptoObject=typeof crypto!=="undefined"?crypto:null;
+  if(cryptoObject&&typeof cryptoObject.randomUUID==="function")
+    return "p"+cryptoObject.randomUUID().replace(/-/g,"");
+  return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+}
 
 /* Productos virtuales (diamantes, códigos, servicios): no se envían y pueden tener stock ilimitado */
 function ilim(p){return p.tipo==="virtual"&&!!p.ilimitado}

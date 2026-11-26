@@ -8,6 +8,7 @@
   },
   "scripts": {
     "audit:release": "node scripts/audit-release.cjs",
+    "build:cloudflare": "node scripts/build-cloudflare.cjs",
     "check:js": "node scripts/check-js.cjs",
     "test": "node --test"
   }
