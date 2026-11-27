@@ -27,13 +27,16 @@ var cfg=REMOTO?Object.assign({},CONFIG):Object.assign({},CONFIG,DATOS_INICIALES.
 function limpiarProducto(p){
   return NexoraContracts.normalizeProduct(p, {makeId:uid, safeImage:safeProductImg});
 }
+function limpiarProductosUnicos(list){
+  return NexoraContracts.uniqueProducts((Array.isArray(list)?list:[]).map(limpiarProducto));
+}
 function esDigitalFreeFire(p){
   return !!(p&&p.tipo==="virtual"&&/free\s*fire|\bff\b|diamante|gemas?/i.test(String(p.name||"")+" "+String(p.category||"")));
 }
 var productosDeRespaldo=lsGet("tienda_productos",null);
 if(!Array.isArray(productosDeRespaldo))productosDeRespaldo=DATOS_INICIALES.productos;
 if(!Array.isArray(productosDeRespaldo))productosDeRespaldo=[];
-var productosLocales=productosDeRespaldo.map(limpiarProducto);
+var productosLocales=limpiarProductosUnicos(productosDeRespaldo);
 var catalogoCargando=REMOTO,catalogoError="";
 var items=productosLocales.slice();
 /* Producto ficticio solo para validar la interfaz local; nunca se publica ni se persiste. */
@@ -102,14 +105,13 @@ function cargarCatalogo(){
   return Backend.catalogo().then(function(c){
     var cf=Object.assign({},c.config||{});delete cf.claveAdmin;delete cf.supabase;
     cfg=Object.assign({},CONFIG,cf,{pts:c.puntos||null,ruleta:[]});
-    items=c.productos.map(limpiarProducto);if(REMOTO)lsSet("tienda_productos",items);catalogoCargando=false;catalogoError="";applyTheme();renderAll();
+    items=limpiarProductosUnicos(c.productos);if(REMOTO)lsSet("tienda_productos",items);catalogoCargando=false;catalogoError="";applyTheme();renderAll();
     /* La ruleta (premios activos) y su costo vienen de la base de datos; el administrador los edita en "Puntos y ruleta". */
     if(!REMOTO)return;
     return Backend.rpc("ruleta_publica").then(function(r){
       if(r&&Array.isArray(r.premios)){
         cfg.ruleta=r.premios;
         cfg.pts=Object.assign({},cfg.pts||{},{objetivo:Number(r.costo)||0});
-        renderAll();
       }
     }).catch(function(e){console.warn("[NEXORA] No se pudo cargar la configuración pública de la ruleta",e)});
   });

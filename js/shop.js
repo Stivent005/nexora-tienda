@@ -6,6 +6,7 @@ Compatible con el CSS de css/shop.css.
 
 var FX_PROXIMOS = [];
 var fxIn = {};
+var FX_RENDERED_IDS = new Set();
 
 function fxRar(p) {
 return agotado(p)
@@ -116,6 +117,7 @@ esc(T(out ? "producto.agotado" : "producto.agregar")) +
 }
 
 function fxSections(act, cats) {
+FX_RENDERED_IDS.clear();
 var q = $("q");
 
 /* Con búsqueda o filtros activos, se conserva el catálogo filtrado */
@@ -128,6 +130,14 @@ return p.offer && p.offerPrice > 0;
 };
 
 var h = "";
+var registrarTarjetasEditoriales = function(list) {
+return list.filter(function(p) {
+var id = String(p && p.id || "");
+if (!id || FX_RENDERED_IDS.has(id)) return false;
+FX_RENDERED_IDS.add(id);
+return true;
+});
+};
 
 var sec = function(k, n, t, b) {
 return '<section class="fx-sec' +
@@ -217,6 +227,7 @@ return (Number(!!isO(b)) - Number(!!isO(a))) ||
 ((b.createdAt || 0) - (a.createdAt || 0));
 }).slice(0, 3)
 : [];
+f = registrarTarjetasEditoriales(f);
 
 if (f.length) {
 h += sec(
@@ -236,14 +247,17 @@ h += sec(
 }
 
 var digitales = act.filter(function(p) { return p.active && p.tipo === "virtual"; });
-if (digitales.length) {
+var digitalesEditoriales = registrarTarjetasEditoriales(digitales.slice().sort(function(a, b) {
+return (b.createdAt || 0) - (a.createdAt || 0);
+}).slice(0, 8));
+if (digitalesEditoriales.length) {
   h += sec(
     "digital",
     "03",
     "PRODUCTOS DIGITALES",
     '<p class="meta">Consulta el valor, los requisitos y la entrega en cada ficha.</p>' +
     '<div class="fx-offers">' +
-    digitales.slice().sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }).slice(0, 8).map(function(p) {
+    digitalesEditoriales.map(function(p) {
       return fxCard(p, false);
     }).join("") +
     '</div>'
@@ -254,6 +268,7 @@ if (digitales.length) {
 var o = ok.filter(function(p) { return p.tipo !== "virtual"; }).filter(function(p) {
 return isO(p) && f.indexOf(p) < 0;
 }).slice(0, 8);
+o = registrarTarjetasEditoriales(o);
 
 if (o.length) {
 h += sec(
@@ -273,6 +288,7 @@ h += sec(
 }
 
 var oDigital = ok.filter(function(p) { return p.tipo === "virtual" && isO(p); }).slice(0, 8);
+oDigital = registrarTarjetasEditoriales(oDigital);
 if (oDigital.length) {
   h += sec("digitalOffers", "05", "OFERTAS DIGITALES",
     '<div class="fx-offers">' + oDigital.map(function(p) { return fxCard(p, false); }).join("") + '</div>');

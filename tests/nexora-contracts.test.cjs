@@ -21,6 +21,15 @@ test("el adaptador conserva productos antiguos y agrega el contrato versionado",
   assert.deepEqual(legacy.variants, []);
 });
 
+test("el catálogo descarta filas repetidas por SKU o ID sin mezclar productos distintos", () => {
+  const first = { id: "pack-100", sku: "FF-100", name: "100 diamantes" };
+  const duplicate = { id: "old-pack-100", sku: "ff-100", name: "100 diamantes duplicado" };
+  const sameNameDifferentSku = { id: "pack-100-alt", sku: "FF-100-ALT", name: "100 diamantes" };
+  const other = { id: "pack-300", name: "300 diamantes" };
+  const result = contracts.uniqueProducts([first, duplicate, sameNameDifferentSku, other]);
+  assert.deepEqual(result, [first, sameNameDifferentSku, other]);
+});
+
 test("version 2 normaliza SKU, especificaciones y variantes sin colisiones ocultas", () => {
   const product = contracts.normalizeProduct({
     id: "p1", name: "Teclado", tipo: "fisico", brand: "Nex", sku: "KB-1",

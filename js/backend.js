@@ -756,7 +756,7 @@ var Backend=(function(){
       return Promise.all([
 
         catalogoGet(
-          "/rest/v1/productos?select=datos,activo&order=creado.asc&limit=1000"
+          "/rest/v1/productos?select=id,datos,activo&order=creado.asc&limit=1000"
         ),
 
         catalogoGet(
@@ -779,11 +779,14 @@ var Backend=(function(){
               ?Object.assign({},x.datos)
               :{};
 
+          /* El ID de la fila es la identidad canónica; datos.id puede ser legado. */
+          if(x.id!=null)d.id=String(x.id);
           d.active=x.activo!==false;
 
           return limpiarProducto(d);
         });
 
+        ps=NexoraContracts.uniqueProducts(ps);
         last={};
 
         ps.forEach(function(p){

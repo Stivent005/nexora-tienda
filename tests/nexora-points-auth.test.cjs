@@ -49,6 +49,6 @@ test("el navegador no manda saldo, UID ni cantidad y usa scripts versionados", (
   assert.match(admin, /por_compra/);
   assert.match(admin, /bienvenida/);
   assert.match(admin, /Guardar configur/);
-  assert.match(pointsPage, /js\/backend\.js\?v=20261127-mercadopago-1/);
+  assert.match(pointsPage, /js\/backend\.js\?v=20261127-catalog-2/);
   assert.match(pointsPage, /js\/puntos\.js\?v=20261126-puntos-auth-1/);
 });

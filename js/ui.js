@@ -1,4 +1,5 @@
 /* INTERFAZ COMÚN: barra superior. La tienda y la administración viven en la misma página. */
+var searchRenderTimer=0;
 function renderTop(){
   $("fname").textContent=T("pie.derechos",{nombre:cfg.nombre});
   document.title=cfg.nombre+(ADMIN_PAGE?" · Administración":"");
@@ -51,7 +52,13 @@ function renderTop(){
     );
   }
 
-  $("q").addEventListener("input",renderStore);
+  $("q").addEventListener("input",function(){
+    clearTimeout(searchRenderTimer);
+    searchRenderTimer=setTimeout(function(){
+      searchRenderTimer=0;
+      renderStore();
+    },100);
+  });
 
   /*
     askPin está definido en admin.js.

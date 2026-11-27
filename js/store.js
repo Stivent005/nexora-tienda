@@ -150,6 +150,9 @@ function renderStore() {
   }
 
   h += fxSections(act, cats);
+  var gridProducts = v.filter(function(p){
+    return !FX_RENDERED_IDS.has(String(p.id));
+  });
 
   if (!v.length && !authed) {
     if (!catalogoCargando && !catalogoError) {
@@ -161,6 +164,8 @@ function renderStore() {
         '<p>' + esc(T(emptyDescriptionKey)) + '</p>' +
       '</div>';
     }
+  } else if (!gridProducts.length && !authed) {
+    h += '<p class="meta" role="status">Todos los productos ya aparecen en las secciones destacadas de arriba.</p>';
   } else {
     h += '<div class="grid">' +
 
@@ -170,7 +175,7 @@ function renderStore() {
           '</button>'
         : '') +
 
-      v.map(function (p, idx) {
+      gridProducts.map(function (p, idx) {
         var off = p.offer && p.offerPrice > 0;
         var out = agotado(p);
         var im = safeProductImg(p.image);

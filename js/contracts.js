@@ -379,6 +379,27 @@
     return ids;
   }
 
+  function uniqueProducts(source) {
+    if (!Array.isArray(source)) return [];
+
+    var seen = Object.create(null);
+    var products = [];
+
+    source.forEach(function (product) {
+      if (!product || typeof product !== "object") return;
+
+      var id = String(product.id == null ? "" : product.id).trim();
+      var sku = String(product.sku == null ? "" : product.sku).trim().toLowerCase();
+      var identity = sku ? "sku:" + sku : "id:" + id;
+      if (!id || seen[identity]) return;
+
+      seen[identity] = true;
+      products.push(product);
+    });
+
+    return products;
+  }
+
   function toggleFavoriteId(source, value) {
     var ids = normalizeFavoriteIds(source);
     var id = typeof value === "string" ? value : "";
@@ -431,6 +452,7 @@
     validateAddress: validateAddress,
     normalizeOrderLine: normalizeOrderLine,
     variantIdentityErrors: variantIdentityErrors,
+    uniqueProducts: uniqueProducts,
     normalizeFavoriteIds: normalizeFavoriteIds,
     toggleFavoriteId: toggleFavoriteId
   };
