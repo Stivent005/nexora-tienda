@@ -1,5 +1,6 @@
 ﻿/* ADMINISTRACIÓN: productos, ofertas, pedidos, clientes, cupones, ajustes y respaldo */
 /* ---------- ADMINISTRACIÓN ---------- */
+var ordersNotice="";
 var adminSearch={orders:"",products:"",customers:"",payments:""};
 var adminProductType="",adminOrderTypeFilter="";
 var adminPaymentFilter="";
@@ -123,9 +124,16 @@ function registrarAbonoPedido(id,button){
   if(!window.confirm("Esto solo registra un pago pendiente por "+fmt.format(monto)+" para revisión. No marca el pedido como pagado ni confirma la entrega. Continúa solo si recibiste evidencia del cliente."))return;
   if(button)button.disabled=true;
   var comprobante=typeof o.comprobante==="string"&&/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(o.comprobante)&&o.comprobante.length<=700000?o.comprobante:"";
-  Backend.registrarAbono(o.id,monto,o.pago||"Pago manual",o.referencia||"",comprobante,"Registro manual desde el pedido; pendiente de verificacion.")
-    .then(function(r){if(r&&r.error)throw new Error(r.error);ordersErr="Pago registrado como pendiente. Verifícalo en Pagos después de comprobar su recepción.";return cargarPedidos();})
-    .catch(function(e){ordersErr="No se pudo registrar el pago: "+(e&&e.message||e);renderAdmin();});
+  return Backend.registrarAbono(o.id,monto,o.pago||"Pago manual",o.referencia||"",comprobante,"Registro manual desde el pedido; pendiente de verificacion.")
+    .then(function(r){
+      if(r&&r.error)throw new Error(r.error);
+      ordersErr="";
+      ordersNotice="Pago registrado para revisión. Comprueba que se recibió en su fuente y verifícalo en Pagos → Pendientes. Solo después aparecerá en Pedidos → Por entregar.";
+      atab="pay";
+      adminPaymentFilter="pendiente";
+      return cargarPedidos();
+    })
+    .catch(function(e){ordersNotice="";ordersErr="No se pudo registrar el pago: "+(e&&e.message||e);renderAdmin();});
 }
 function revisarPagoCompleto(id){
   if(!window.confirm(
@@ -171,7 +179,7 @@ function revisarPagoCompleto(id){
     return;
   }
 
-  Backend.verificarAbono(
+  return Backend.verificarAbono(
     p.id,
     true,
     "Pago completo verificado manualmente desde el panel."
@@ -187,6 +195,12 @@ function revisarPagoCompleto(id){
       var actualizado=orders.find(function(x){return String(x.id)===pedidoId;});
       if(!actualizado||estadoDe(actualizado)!=="Pagado"){
         ordersErr="Supabase acepto el pago completo, pero el pedido no aparece como Pagado al recargar. Actualiza la lista y revisa el estado antes de entregar.";
+        renderAdmin();
+      }else{
+        ordersErr="";
+        ordersNotice="Pago verificado. El pedido está en Pedidos → Por entregar; confirma cada entrega desde su botón.";
+        atab="orders";
+        pedidoFiltro="Pagado";
         renderAdmin();
       }
     });
@@ -327,6 +341,7 @@ function renderAdmin(){
     var filterState=function(o){return paymentView?String(o.pagoRegistro&&o.pagoRegistro.estado||"").toLowerCase():estadoDe(o)};
     var cnt=function(estado){return sourceOrders.filter(function(o){return!estado||filterState(o)===estado}).length};
     if(!Backend.remote)h+='<div class="msg">Modo de prueba: los pedidos se guardan solo en este navegador. Para recibir los pedidos de tus clientes aquí, configura la base de datos (README, "Pedidos en línea").</div>';
+    if(ordersNotice)h+='<div class="msg admin-flow-notice" role="status" aria-live="polite">'+esc(ordersNotice)+' <button class="btn sm" data-x="notice-dismiss">Entendido</button></div>';
     if(ordersErr)h+='<div class="msg err" role="alert">'+esc(ordersErr)+' Usa “Actualizar” para volver a intentar. <button class="btn sm" data-x="orders-retry">Reintentar</button></div>';
     h+='<div class="admin-tools"><label class="admin-search"><span class="sr-only">'+(paymentView?"Buscar pagos":"Buscar pedidos")+'</span><input id="'+searchId+'" type="search" placeholder="'+(paymentView?"Buscar cliente, pedido o referencia de pago…":"Buscar cliente, teléfono, pedido o pago…")+'" value="'+esc(adminSearch[searchKey])+'"></label><label><span class="sr-only">Tipo de pedido</span><select id="admin-order-type"><option value="">Todos los tipos</option><option value="fisico"'+(adminOrderTypeFilter==="fisico"?" selected":"")+'>Físicos</option><option value="digital"'+(adminOrderTypeFilter==="digital"?" selected":"")+'>Digitales</option><option value="mixto"'+(adminOrderTypeFilter==="mixto"?" selected":"")+'>Mixtos</option></select></label><button class="btn" id="orefresh">Actualizar</button>'+(paymentView?'':'<button class="btn primary" id="onew">Registrar pedido</button>')+'</div>';
     h+='<div class="admin-filter-row" role="group" aria-label="'+(paymentView?"Filtrar pagos por estado":"Filtrar pedidos por estado")+'">'+F.map(function(f){return '<button class="chip" aria-pressed="'+(currentFilter===f[0])+'" data-pf="'+f[0]+'">'+f[1]+' ('+cnt(f[0])+')</button>'}).join("")+'</div>';

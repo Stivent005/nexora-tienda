@@ -70,7 +70,7 @@ test("un pedido seguro con comprobante pero sin abono permite registrarlo como p
   assert.match(admin, /Registrar pago para revisión/);
   assert.match(admin, /Backend\.registrarAbono\(o\.id,monto/);
   assert.match(backend, /registrarAbono:function\(pedidoId,monto,metodo,referencia,comprobante,nota\)[\s\S]*rpcChecked\("admin_registrar_abono"/);
-  assert.match(admin, /Pago registrado como pendiente/);
+  assert.match(admin, /Pago registrado para revisión/);
   const start = admin.indexOf("function registrarAbonoPedido");
   const end = admin.indexOf("function revisarPagoCompleto", start);
   assert.ok(start >= 0 && end > start);

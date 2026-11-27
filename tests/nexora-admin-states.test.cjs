@@ -138,6 +138,53 @@ test("el menú abre Pedidos, Pagos y Cupones con sus propios controles", async (
   assert.match(panel.innerHTML, /<b>BIENVENIDO10<\/b>/);
 });
 
+test("registrar el pago abre Pagos pendientes y verificarlo abre Por entregar", async () => {
+  let paymentVerified = false;
+  const order = {
+    id: "pedido-pago-prueba", estado: "Pendiente", total: 12000,
+    pago: "Transferencia", referencia: "REF-PRUEBA"
+  };
+  const context = {
+    Backend: {
+      registrarAbono: async () => ({ ok: true }),
+      verificarAbono: async () => { paymentVerified = true; return { pagado: true, saldo: 0 }; }
+    },
+    window: { confirm: () => true },
+    orders: [order], ordersErr: "", ordersNotice: "", atab: "orders",
+    adminPaymentFilter: "", pedidoFiltro: "Pendiente", ordersLoading: false,
+    fmt: { format: (value) => `COP ${value}` },
+    estadoDe: (row) => row.estado,
+    renderAdmin() { this.renderCount = (this.renderCount || 0) + 1; }
+  };
+  context.cargarPedidos = async () => {
+    if (paymentVerified) {
+      order.estado = "Pagado";
+      order.pagoRegistro.estado = "verificado";
+    } else {
+      order.pagoRegistro = { id: "abono-prueba", pedido_id: order.id, estado: "pendiente", monto: order.total };
+    }
+    context.renderAdmin();
+  };
+  vm.createContext(context);
+  const source = fs.readFileSync(path.join(root, "js/admin.js"), "utf8");
+  const registerStart = source.indexOf("function registrarAbonoPedido");
+  const verifyStart = source.indexOf("function revisarPagoCompleto", registerStart);
+  const refundStart = source.indexOf("function registrarReintegro", verifyStart);
+  assert.ok(registerStart >= 0 && verifyStart > registerStart && refundStart > verifyStart);
+  vm.runInContext(source.slice(registerStart, verifyStart) + source.slice(verifyStart, refundStart), context);
+
+  await context.registrarAbonoPedido(order.id, { disabled: false });
+  assert.equal(context.atab, "pay");
+  assert.equal(context.adminPaymentFilter, "pendiente");
+  assert.match(context.ordersNotice, /Pagos → Pendientes/);
+
+  await context.revisarPagoCompleto("abono-prueba");
+  assert.equal(order.estado, "Pagado");
+  assert.equal(context.atab, "orders");
+  assert.equal(context.pedidoFiltro, "Pagado");
+  assert.match(context.ordersNotice, /Pedidos → Por entregar/);
+});
+
 test("el documento admin ofrece salto de teclado al contenido y el destino acepta foco", () => {
   const html = fs.readFileSync(path.join(root, "admin.html"), "utf8");
   assert.match(html, /<a class="skip" href="#adminroot">Saltar al contenido<\/a>/);
