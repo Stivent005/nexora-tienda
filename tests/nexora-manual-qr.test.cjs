@@ -55,3 +55,20 @@ test("la tienda oculta Mercado Pago automático y conserva transferencias manual
 
   assert.deepEqual(Array.from(context.pagos(), (method) => method.id), ["nequi"]);
 });
+
+test("la reparación SQL restaura inventario y guards desde la migración 05 sin abrir la tabla", () => {
+  const security = fs.readFileSync(path.join(root, "scripts", "supabase", "05_seguridad_compras_pagos.sql"), "utf8");
+  const repair = fs.readFileSync(path.join(root, "scripts", "supabase", "19b_reparar_estado_pedido.sql"), "utf8");
+  const functionSql = (source, name) => {
+    const start = source.indexOf(`create or replace function public.${name}(`);
+    const end = source.indexOf("end $$;", start) + "end $$;".length;
+    assert.ok(start >= 0 && end > start, `falta ${name}`);
+    return source.slice(start, end);
+  };
+
+  assert.match(repair, /create table if not exists public\.inventario_movimientos/);
+  assert.match(repair, /alter table public\.inventario_movimientos enable row level security/);
+  assert.match(repair, /revoke all on public\.inventario_movimientos from anon,authenticated/);
+  assert.equal(functionSql(repair, "nexora_aplicar_inventario"), functionSql(security, "nexora_aplicar_inventario"));
+  assert.equal(functionSql(repair, "nexora_guardar_estado_pedido"), functionSql(security, "nexora_guardar_estado_pedido"));
+});

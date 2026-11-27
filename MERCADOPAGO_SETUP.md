@@ -20,6 +20,6 @@ El QR y el número se guardan en la configuración de la tienda, no en el códig
 
 ## Migraciones necesarias en Supabase
 
-La migración `20_mercadopago_checkout.sql` también crea la consulta que permite listar y revisar los pagos en el panel; su método de Mercado Pago queda apagado. Si ya están las tablas `pedidos`, `pagos_abonos`, `pedido_propietarios` y `ajustes`, pero falta `nexora_guardar_estado_pedido()`, ejecuta `19b_reparar_estado_pedido.sql` primero y después ejecuta completa la migración 20. La reparación se detiene y enumera dependencias si la migración 05 está incompleta.
+La migración `20_mercadopago_checkout.sql` también crea la consulta que permite listar y revisar los pagos en el panel; su método de Mercado Pago queda apagado. Si falta `nexora_guardar_estado_pedido()`, ejecuta la versión más reciente de `19b_reparar_estado_pedido.sql` primero y después ejecuta completa la migración 20. La reparación restaura `inventario_movimientos`, `nexora_aplicar_inventario()` y el guard de estados; valida las tablas base antes de cambiar algo y mantiene los movimientos de inventario privados.
 
 La automatización de Mercado Pago solo debe prepararse si más adelante decides activarla expresamente.
