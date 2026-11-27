@@ -45,8 +45,13 @@ for (const htmlFile of ["index.html", "admin.html"]) {
   }
 }
 
-// Recurso compartido por los paquetes digitales iniciales del catálogo Supabase.
-addAsset("images/diamantes-free-fire.png");
+// Imágenes de referencia usadas por los paquetes digitales del catálogo Supabase.
+for (const image of [
+  "images/ff-caja-azul-amarilla.jpg",
+  "images/ff-cofre-rojo-diamantes.jpg",
+  "images/ff-caja-segura-diamantes.jpg",
+  "images/ff-cofre-azul-rojo.jpg"
+]) addAsset(image);
 
 const config = fs.readFileSync(path.join(root, "js/config.js"), "utf8");
 if (/service_role|secret_key/i.test(config) || !/anonKey\s*:\s*["'](?:sb_publishable_|eyJ)/.test(config)) {

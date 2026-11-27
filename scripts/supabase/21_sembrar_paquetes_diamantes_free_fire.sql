@@ -59,20 +59,20 @@ select p.id,
          'offer', false,
          'offerPrice', 0,
          'active', true,
-         'image', '/images/diamantes-free-fire.png',
+         'image', p.imagen,
          'createdAt', floor(extract(epoch from now()) * 1000)
        ),
        true
 from (values
-  ('ff-diam-100',  '100 diamantes Free Fire',   '100 diamantes',   'FF-DIAM-100',  3000),
-  ('ff-diam-300',  '300 diamantes Free Fire',   '300 diamantes',   'FF-DIAM-300',  9000),
-  ('ff-diam-500',  '500 diamantes Free Fire',   '500 diamantes',   'FF-DIAM-500', 17000),
-  ('ff-diam-1000', '1.000 diamantes Free Fire', '1.000 diamantes', 'FF-DIAM-1000',35000),
-  ('ff-diam-2000', '2.000 diamantes Free Fire', '2.000 diamantes', 'FF-DIAM-2000',73000),
-  ('ff-diam-5000', '5.000 diamantes Free Fire', '5.000 diamantes', 'FF-DIAM-5000',160000),
-  ('ff-diam-6120', '6.120 diamantes Free Fire', '6.120 diamantes', 'FF-DIAM-6120',170000)
-) as p(id, nombre, paquete, sku, precio)
-on conflict (id) do nothing;
+  ('ff-diam-100',  '100 diamantes Free Fire',   '100 diamantes',   'FF-DIAM-100',  3000,   '/images/ff-caja-azul-amarilla.jpg'),
+  ('ff-diam-300',  '300 diamantes Free Fire',   '300 diamantes',   'FF-DIAM-300',  9000,   '/images/ff-cofre-rojo-diamantes.jpg'),
+  ('ff-diam-500',  '500 diamantes Free Fire',   '500 diamantes',   'FF-DIAM-500', 17000,   '/images/ff-caja-segura-diamantes.jpg'),
+  ('ff-diam-1000', '1.000 diamantes Free Fire', '1.000 diamantes', 'FF-DIAM-1000',35000,   '/images/ff-cofre-azul-rojo.jpg'),
+  ('ff-diam-2000', '2.000 diamantes Free Fire', '2.000 diamantes', 'FF-DIAM-2000',73000,   '/images/ff-caja-azul-amarilla.jpg'),
+  ('ff-diam-5000', '5.000 diamantes Free Fire', '5.000 diamantes', 'FF-DIAM-5000',160000,  '/images/ff-cofre-rojo-diamantes.jpg'),
+  ('ff-diam-6120', '6.120 diamantes Free Fire', '6.120 diamantes', 'FF-DIAM-6120',170000,  '/images/ff-caja-segura-diamantes.jpg')
+) as p(id, nombre, paquete, sku, precio, imagen)
+on conflict (id) do update set datos = excluded.datos, activo = excluded.activo;
 
 notify pgrst, 'reload schema';
 commit;
