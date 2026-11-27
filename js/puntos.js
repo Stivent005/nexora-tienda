@@ -1,11 +1,11 @@
 
 /* PUNTOS Y RULETA (lado del cliente).
    El ID de jugador identifica la cuenta de juego, no demuestra que quien consulta sea su titular.
-   El acceso a saldos/historial queda desactivado hasta tener autenticación de titular verificada en servidor.
-   - Canjear premios y girar la ruleta requieren además el PIN; la autorización del backend sigue pendiente.
+   El acceso a saldos/historial queda desactivado hasta tener autenticaciÃ³n de titular verificada en servidor.
+   - Canjear premios y girar la ruleta requieren ademÃ¡s el PIN; la autorizaciÃ³n del backend sigue pendiente.
    - Los puntos los suma y resta SOLA la base de datos cuando cambia el estado del pedido.
-   - Costos, saldo, stock y el premio de la ruleta los decide siempre la base de datos; aquí solo se muestra y se anima.
-   El PIN se guarda únicamente en memoria mientras la ventana está abierta (nunca en localStorage). */
+   - Costos, saldo, stock y el premio de la ruleta los decide siempre la base de datos; aquÃ­ solo se muestra y se anima.
+   El PIN se guarda Ãºnicamente en memoria mientras la ventana estÃ¡ abierta (nunca en localStorage). */
 
 /* Cerrado por defecto: no existe en el frontend un contexto de titular verificado por el servidor. */
 var PUNTOS_PRIVADOS_AUTENTICADOS = false;
@@ -30,7 +30,7 @@ function puntosProgramaOn() {
 function ptsAviso(total, promocionFF) {
   if (!promocionFF || !puntosProgramaOn()) return "";
 
-  return '<p class="meta">🎁 Los puntos de compras se acreditan a la cuenta Nexora autenticada cuando se confirma el pago. El ID de Free Fire es solo un dato de entrega y no permite consultar el saldo.</p>';
+  return '<p class="meta">ðŸŽ Los puntos de compras se acreditan a la cuenta Nexora autenticada cuando se confirma el pago. El ID de Free Fire es solo un dato de entrega y no permite consultar el saldo.</p>';
 }
 
 var COLORES = [
@@ -75,8 +75,8 @@ function ptsErr(e) {
   var m = String((e && e.message) || e || "");
 
   return /404|PGRST202|find the function|schema cache/i.test(m)
-    ? "El programa de puntos todavía no está instalado en la base de datos."
-    : "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.";
+    ? "El programa de puntos todavÃ­a no estÃ¡ instalado en la base de datos."
+    : "No se pudo completar. Revisa tu conexiÃ³n e intÃ©ntalo de nuevo.";
 }
 
 function ptsFecha(s) {
@@ -95,7 +95,7 @@ function ptsMsgErr(t) {
   return '<span class="err">' + esc(t) + '</span>';
 }
 
-/* Si el servidor dice que el PIN falló o que hay bloqueo, se olvida el PIN en memoria. */
+/* Si el servidor dice que el PIN fallÃ³ o que hay bloqueo, se olvida el PIN en memoria. */
 function ptsRevisaPin(texto) {
   if (/PIN|intentos/i.test(String(texto || ""))) rueda.pin = null;
 }
@@ -108,10 +108,10 @@ function abrirPuntos() {
   var b = $("dbox");
   $("dlg").showModal();
   if (!Backend.accountsReady || !Backend.customer()) {
-    b.innerHTML = '<h2>🎁 Mis puntos</h2>' +
-      '<p class="meta">El saldo se consulta con la cuenta autenticada de Nexora. El ID de Free Fire no sirve para iniciar sesión ni consultar puntos.</p>' +
+    b.innerHTML = '<h2>ðŸŽ Mis puntos</h2>' +
+      '<p class="meta">El saldo se consulta con la cuenta autenticada de Nexora. El ID de Free Fire no sirve para iniciar sesiÃ³n ni consultar puntos.</p>' +
       '<div class="foot"><button class="btn" data-x="close">Cerrar</button>' +
-      (Backend.accountsReady ? '<button class="btn primary" id="pt-auth">Iniciar sesión / crear cuenta</button>' : '') + '</div>';
+      (Backend.accountsReady ? '<button class="btn primary" id="pt-auth">Iniciar sesiÃ³n / crear cuenta</button>' : '') + '</div>';
     var authButton = $("pt-auth");
     if (authButton) authButton.addEventListener("click", function () {
       $("dlg").close();
@@ -119,7 +119,7 @@ function abrirPuntos() {
     });
     return;
   }
-  b.innerHTML = '<h2>🎁 Mis puntos</h2><p class="meta" role="status">Consultando tu saldo e historial…</p>' +
+  b.innerHTML = '<h2>ðŸŽ Mis puntos</h2><p class="meta" role="status">Consultando tu saldo e historialâ€¦</p>' +
     '<div class="foot"><button class="btn" data-x="close">Cerrar</button></div>';
   cargarPuntosCliente();
 }
@@ -131,39 +131,82 @@ function fechaMovimientoPuntos(valor) {
 
 function pintarPuntosCliente(datos, aviso) {
   var b = $("dbox"), p = datos || {}, movimientos = Array.isArray(p.movimientos) ? p.movimientos : [], premios = Array.isArray(p.premios) ? p.premios : [];
-  var nombreMotivo = {compra:"Compra", bienvenida:"Bonificación de bienvenida", reversa_compra:"Reversión de compra", canje:"Canje", canje_cancelado:"Canje devuelto"};
-  var html = '<h2>🎁 Mis puntos</h2>' + (aviso ? '<p class="account-note" role="status">'+esc(aviso)+'</p>' : '');
+  var ruleta=p.ruleta||{}, ruletaPremios=Array.isArray(ruleta.premios)?ruleta.premios:[], cupones=Array.isArray(p.cupones)?p.cupones:[], pendientes=Array.isArray(p.pendientes_ruleta)?p.pendientes_ruleta:[];
+  var nombreMotivo = {compra:"Compra", bienvenida:"BonificaciÃ³n de bienvenida", reversa_compra:"ReversiÃ³n de compra", canje:"Canje", canje_cancelado:"Canje devuelto"};
+  var html = '<h2>ðŸŽ Mis puntos</h2>' + (aviso ? '<p class="account-note" role="status">'+esc(aviso)+'</p>' : '');
+  if(!aviso)html+='<p class="account-note" role="status"></p>';
   html += '<div class="box"><div class="meta">Saldo disponible</div><strong style="font-size:2rem">'+esc(p.puntos|0)+' puntos</strong>'+
-    (p.activa ? '<p class="meta">Ganas '+esc(p.por_compra|0)+' puntos por compra y '+(p.cada>0?'1 punto por cada '+esc(fmt.format(p.cada))+' pagados.':'sin bonificación por monto configurada.')+'</p>' : '<p class="meta">El programa está pausado. Tu saldo e historial siguen disponibles.</p>')+'</div>';
+    (p.activa ? '<p class="meta">Ganas '+esc(p.por_compra|0)+' puntos por compra y '+(p.cada>0?'1 punto por cada '+esc(fmt.format(p.cada))+' pagados.':'sin bonificaciÃ³n por monto configurada.')+'</p>' : '<p class="meta">El programa estÃ¡ pausado. Tu saldo e historial siguen disponibles.</p>')+'</div>';
   if (p.activa && premios.length) html += '<div class="bar"><b>Premios disponibles</b></div><div class="list">'+premios.map(function(x){
-    return '<div class="row ptsl"><span><b>'+esc(x.nombre)+'</b><span class="meta">'+esc(x.descripcion||'')+' · '+esc(x.costo)+' puntos'+(x.disponible?'':' · agotado')+'</span></span>'+
+    return '<div class="row ptsl"><span><b>'+esc(x.nombre)+'</b><span class="meta">'+esc(x.descripcion||'')+' Â· '+esc(x.costo)+' puntos'+(x.disponible?'':' Â· agotado')+'</span></span>'+
       '<button class="btn sm" data-puntos-canje="'+esc(x.id)+'"'+(x.disponible&&(p.puntos|0)>=(x.costo|0)?'':' disabled')+'>Canjear</button></div>';
   }).join('')+'</div>';
+  if(ruletaPremios.length)cfg.ruleta=ruletaPremios;
+  if(p.activa&&ruleta.disponible&&ruletaPremios.length>1){
+    html+='<div class="bar"><b>Ruleta de premios</b></div><p class="meta">Los descuentos generan un codigo de un uso. La vigencia y compra minima dependen de la regla indicada en cada cupon.</p>'+
+      '<div class="wheelbox"><div class="pointer"></div><canvas id="wheel" width="600" height="600" aria-label="Ruleta de premios"></canvas></div>'+
+      '<div class="foot"><button class="btn primary" id="pt-girar-auth"'+((p.puntos|0)<(ruleta.costo|0)||pendientes.length?' disabled':'')+'>Girar ruleta ('+esc(ruleta.costo|0)+' puntos)</button></div>';
+  }
+  if(pendientes.length){
+    html+='<div class="bar"><b>Completa la entrega de tu premio</b></div><div class="list">'+pendientes.map(function(g){return '<div class="row ptsl"><span><b>'+esc(g.nombre)+'</b><span class="meta">Escribe tu ID de Free Fire para enviar el premio al administrador. Este dato solo se usa para la entrega.</span><input inputmode="numeric" maxlength="15" data-ff-premio="'+esc(g.id)+'" placeholder="ID de Free Fire"></span><button class="btn sm primary" data-enviar-premio="'+esc(g.id)+'">Enviar ID</button></div>';}).join('')+'</div>';
+  }
+  if(cupones.length)html+='<div class="bar"><b>Mis cupones de ruleta</b></div><div class="list">'+cupones.map(function(c){var vencido=Date.parse(c.vence)<=Date.now(),estado=c.usado?'Usado':c.reservado?'En un pedido':vencido?'Vencido':'Disponible';return '<div class="row ptsl"><span><b>'+esc(c.nombre)+'</b><span class="meta">'+esc(c.tipo==='pct'?c.valor+'% de descuento':fmt.format(c.valor))+' Ã‚Â· '+esc(estado)+' Ã‚Â· vence '+esc(fechaMovimientoPuntos(c.vence))+' Ã‚Â· mÃƒÂ­nimo '+esc(fmt.format(c.compra_minima||0))+'</span><br><code>'+esc(c.codigo)+'</code></span></div>';}).join('')+'</div>';
   var canjes = Array.isArray(p.canjes) ? p.canjes : [];
-  if(canjes.length) html += '<div class="bar"><b>Mis canjes</b></div><div class="list">'+canjes.map(function(c){return '<div class="row ptsl"><span><b>'+esc(c.nombre)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(c.creado))+' · '+esc(c.costo)+' pts</span></span><span class="tag'+(c.estado==='entregado'?'':' off')+'">'+esc(c.estado)+'</span></div>';}).join('')+'</div>';
-  html += '<div class="bar"><b>Historial</b></div>'+(movimientos.length?'<div class="list">'+movimientos.map(function(m){var n=m.cantidad|0;return '<div class="row ptsl"><span><b>'+esc(nombreMotivo[m.motivo]||m.motivo)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(m.creado))+(m.referencia?' · '+esc(m.referencia):'')+'</span></span><b>'+(n>0?'+':'')+esc(n)+'</b></div>';}).join('')+'</div>':'<div class="empty"><p>Aún no hay movimientos.</p></div>')+
+  if(canjes.length) html += '<div class="bar"><b>Mis canjes</b></div><div class="list">'+canjes.map(function(c){return '<div class="row ptsl"><span><b>'+esc(c.nombre)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(c.creado))+' Â· '+esc(c.costo)+' pts</span></span><span class="tag'+(c.estado==='entregado'?'':' off')+'">'+esc(c.estado)+'</span></div>';}).join('')+'</div>';
+  html += '<div class="bar"><b>Historial</b></div>'+(movimientos.length?'<div class="list">'+movimientos.map(function(m){var n=m.cantidad|0;return '<div class="row ptsl"><span><b>'+esc(nombreMotivo[m.motivo]||m.motivo)+'</b><span class="meta">'+esc(fechaMovimientoPuntos(m.creado))+(m.referencia?' Â· '+esc(m.referencia):'')+'</span></span><b>'+(n>0?'+':'')+esc(n)+'</b></div>';}).join('')+'</div>':'<div class="empty"><p>AÃºn no hay movimientos.</p></div>')+
     '<div class="foot"><button class="btn" data-x="close">Cerrar</button><button class="btn" id="pt-refresh">Actualizar</button></div>';
   b.innerHTML = html;
+  if($("wheel"))dibujarRueda();
   var refresh = $("pt-refresh");
   if (refresh) refresh.addEventListener("click", cargarPuntosCliente);
   b.querySelectorAll("[data-puntos-canje]").forEach(function(button){button.addEventListener("click",function(){canjearPuntosCliente(button.getAttribute("data-puntos-canje"));});});
+  var spin=$("pt-girar-auth");if(spin)spin.addEventListener("click",girarRuletaAutenticada);
+  b.querySelectorAll("[data-enviar-premio]").forEach(function(button){button.addEventListener("click",function(){
+    var id=button.getAttribute("data-enviar-premio"),input=b.querySelector('[data-ff-premio="'+id+'"]'),ff=String(input&&input.value||"").replace(/\D/g,"");
+    if(!/^[0-9]{6,15}$/.test(ff)){if(input){input.setAttribute("aria-invalid","true");input.focus();}return;}
+    button.disabled=true;
+    Backend.completarPremioRuletaCliente(id,ff).then(function(){return cargarPuntosCliente("ID enviado. Tu premio quedÃƒÂ³ en la cola de entrega del administrador.");})
+      .catch(function(e){button.disabled=false;var status=b.querySelector('[role="status"]');if(status)status.textContent=e.message;});
+  });});
+}
+
+function girarRuletaAutenticada(){
+  var button=$("pt-girar-auth");if(!button||button.disabled)return;
+  var user=Backend.customer()||{},storeKey="nexora_ruleta_clave_"+String(user.id||"cliente"),key="";
+  try{key=sessionStorage.getItem(storeKey)||"";if(!key){key=ptsClave();sessionStorage.setItem(storeKey,key);}}catch(e){key=ptsClave();}
+  button.disabled=true;button.textContent="Girandoâ€¦";
+  Backend.girarRuletaCliente(key).then(function(r){
+    if(!r||r.error)throw new Error(r&&r.error||"No se pudo completar el giro.");
+    try{sessionStorage.removeItem(storeKey);}catch(e){}
+    var aviso=r.tipo==="nada"?"Esta vez no hubo premio. Â¡Sigue acumulando puntos!":
+      r.tipo==="puntos"?"Ganaste "+r.valor+" puntos. Ya estÃ¡n en tu saldo.":
+      r.tipo==="manual"?"Ganaste "+r.nombre+". Escribe tu ID de Free Fire para enviar el premio al administrador.":
+      "Ganaste "+r.nombre+". Tu cupÃ³n de un uso es "+r.codigo+".";
+    var canvas=$("wheel"),n=(cfg.ruleta||[]).length,finish=function(){cargarPuntosCliente(aviso);};
+    if(!canvas||!n||Number(r.segmentos)!==n){finish();return;}
+    var seg=360/n,index=Math.max(0,Math.min(n-1,Number(r.indice)||0)),reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+    rueda.rot=(Math.floor(rueda.rot/360)+6)*360-(index+.5)*seg;
+    canvas.style.transition=reduced?"none":"transform 4s cubic-bezier(.12,.7,.12,1)";
+    requestAnimationFrame(function(){canvas.style.transform="rotate("+rueda.rot+"deg)";});
+    setTimeout(finish,reduced?0:4200);
+  }).catch(function(e){button.disabled=false;button.textContent="Reintentar giro";var status=$("dbox").querySelector('[role="status"]');if(status)status.textContent=e&&e.message||"No se pudo completar el giro.";});
 }
 
 function cargarPuntosCliente(aviso) {
   if (!Backend.customer()) return Promise.resolve(false);
   return Backend.misPuntosCliente().then(function(datos){pintarPuntosCliente(datos,aviso);return datos;})
-    .catch(function(e){var b=$("dbox");b.innerHTML='<h2>🎁 Mis puntos</h2><p class="err" role="alert">'+esc(e&&e.message||"No se pudieron consultar los puntos.")+'</p><div class="foot"><button class="btn" data-x="close">Cerrar</button><button class="btn" id="pt-refresh">Reintentar</button></div>';$("pt-refresh").addEventListener("click",function(){cargarPuntosCliente();});return false;});
+    .catch(function(e){var b=$("dbox");b.innerHTML='<h2>ðŸŽ Mis puntos</h2><p class="err" role="alert">'+esc(e&&e.message||"No se pudieron consultar los puntos.")+'</p><div class="foot"><button class="btn" data-x="close">Cerrar</button><button class="btn" id="pt-refresh">Reintentar</button></div>';$("pt-refresh").addEventListener("click",function(){cargarPuntosCliente();});return false;});
 }
 
 function canjearPuntosCliente(id) {
-  if (!window.confirm("¿Confirmas canjear este premio? El saldo y el stock se validan en el servidor.")) return;
+  if (!window.confirm("Â¿Confirmas canjear este premio? El saldo y el stock se validan en el servidor.")) return;
   var clave=ptsClave();
   Backend.canjearPuntosCliente(id,clave).then(function(r){return cargarPuntosCliente(r&&r.nombre?"Canje registrado: "+r.nombre:"Canje registrado.");})
     .catch(function(e){cargarPuntosCliente(e&&e.message||"No se pudo completar el canje.");});
 }
 
 /* ==========================================
-   CONSULTAR CUENTA (requiere autenticación verificada del titular)
+   CONSULTAR CUENTA (requiere autenticaciÃ³n verificada del titular)
    ========================================== */
 
 function ptsAplicar(a, r) {
@@ -196,12 +239,12 @@ function verPuntos(ff, msg) {
   if (v.length < 6 || v.length > 15) {
     if ($("pt-err")) {
       $("pt-err").textContent =
-        "Escribe tu ID de Free Fire (solo números).";
+        "Escribe tu ID de Free Fire (solo nÃºmeros).";
     }
     return;
   }
 
-  if ($("pt-err")) $("pt-err").textContent = "Consultando…";
+  if ($("pt-err")) $("pt-err").textContent = "Consultandoâ€¦";
 
   Backend.rpc("consultar_puntos", { p_ff: v })
     .then(function (r) {
@@ -293,28 +336,28 @@ function ptsInputPin(id, ph, lbl) {
 function ptsFormAcceso(a) {
   if (!a.existe) {
     return '<div class="box"><div class="meta">' +
-        'Este ID todavía no tiene cuenta. Crea un <b>PIN de 4 a 6 números</b> ' +
+        'Este ID todavÃ­a no tiene cuenta. Crea un <b>PIN de 4 a 6 nÃºmeros</b> ' +
         'para poder canjear premios y girar la ruleta. No lo compartas.</div>' +
-      '<div class="f">' + ptsInputPin("pt-pin1", "Crea tu PIN (4 a 6 números)", "PIN de seguridad (4 a 6 números)") + '</div>' +
+      '<div class="f">' + ptsInputPin("pt-pin1", "Crea tu PIN (4 a 6 nÃºmeros)", "PIN de seguridad (4 a 6 nÃºmeros)") + '</div>' +
       '<div class="foot"><button class="btn primary" id="pt-crear">Crear mi cuenta</button></div></div>';
   }
 
   if (!a.tienePin || rueda.olvido) {
     return '<div class="box"><div class="meta">' +
         (a.tienePin
-          ? 'Para cambiar tu PIN escribe el número de un pedido tuyo hecho con este ID.'
-          : 'Este ID ya tiene puntos de tus compras. Actívalo con el número de un pedido tuyo hecho con este ID y crea tu PIN.') +
+          ? 'Para cambiar tu PIN escribe el nÃºmero de un pedido tuyo hecho con este ID.'
+          : 'Este ID ya tiene puntos de tus compras. ActÃ­valo con el nÃºmero de un pedido tuyo hecho con este ID y crea tu PIN.') +
       '</div>' +
       '<div class="f">' +
         '<div class="form-field" id="grp-pt-ped">' +
-          '<label class="field-label" for="pt-ped">Número de pedido *</label>' +
+          '<label class="field-label" for="pt-ped">NÃºmero de pedido *</label>' +
           '<div class="input-wrap">' +
             '<input id="pt-ped" maxlength="12" autocomplete="off" placeholder="Ej: A1B2C3">' +
             '<span class="field-icon" aria-hidden="true"></span>' +
           '</div>' +
           '<div class="field-msg"></div>' +
         '</div>' +
-        ptsInputPin("pt-pin1", "Nuevo PIN (4 a 6 números)", "Nuevo PIN") +
+        ptsInputPin("pt-pin1", "Nuevo PIN (4 a 6 nÃºmeros)", "Nuevo PIN") +
       '</div>' +
       '<div class="foot">' +
         (a.tienePin ? '<button class="btn" id="pt-olv0">Cancelar</button>' : '') +
@@ -324,14 +367,14 @@ function ptsFormAcceso(a) {
 
   if (!rueda.pin) {
     return '<div class="box"><div class="meta">Escribe tu PIN para canjear premios o girar la ruleta.</div>' +
-      '<div class="f">' + ptsInputPin("pt-pin", "Tu PIN (4 a 6 números)", "PIN de acceso") + '</div>' +
+      '<div class="f">' + ptsInputPin("pt-pin", "Tu PIN (4 a 6 nÃºmeros)", "PIN de acceso") + '</div>' +
       '<div class="foot">' +
-        '<button class="btn" id="pt-olv">Olvidé mi PIN</button>' +
+        '<button class="btn" id="pt-olv">OlvidÃ© mi PIN</button>' +
         '<button class="btn primary" id="pt-unl">Desbloquear</button>' +
       '</div></div>';
   }
 
-  return '<div class="meta">🔓 PIN verificado. ' +
+  return '<div class="meta">ðŸ”“ PIN verificado. ' +
     '<button class="btn sm" id="pt-bloq">Bloquear</button></div>';
 }
 
@@ -365,9 +408,9 @@ function pintarCuenta(msg) {
         var ok = p.disponible && alcanza;
 
         return '<div class="row ptsl"><span><b>' + esc(p.nombre) + '</b> ' +
-            '<span class="meta">' + esc(p.descripcion || "") + ' • ' +
+            '<span class="meta">' + esc(p.descripcion || "") + ' â€¢ ' +
             esc(p.costo) + ' pts' +
-            (p.disponible ? '' : ' • agotado') + '</span></span>' +
+            (p.disponible ? '' : ' â€¢ agotado') + '</span></span>' +
           '<button class="btn sm" data-canje="' + esc(p.id) + '"' +
             (ok ? '' : ' disabled') + '>Canjear</button></div>';
       }).join("") + '</div>';
@@ -381,7 +424,7 @@ function pintarCuenta(msg) {
 
   /* Cupones y canjes: solo con PIN */
   if (rueda.pin && a.premios && a.premios.length) {
-    h += '<div class="meta">Tus cupones disponibles (úsalos en el carrito):</div>' +
+    h += '<div class="meta">Tus cupones disponibles (Ãºsalos en el carrito):</div>' +
       a.premios.map(function (p) {
         return '<div class="line">' +
           '<span><b>' + esc(p.codigo) + '</b> ' +
@@ -401,7 +444,7 @@ function pintarCuenta(msg) {
       }).join("") + '</div>';
   }
 
-  /* Historial de movimientos (sin números de pedido) */
+  /* Historial de movimientos (sin nÃºmeros de pedido) */
   h += '<div class="bar"><b>Historial</b></div>' +
     (a.mov && a.mov.length
       ? '<div class="list">' + a.mov.slice(0, 15).map(function (m) {
@@ -412,13 +455,13 @@ function pintarCuenta(msg) {
               ' <span class="meta">' + esc(ptsFecha(m.creado)) + '</span></span>' +
             '<b>' + (n > 0 ? "+" : "") + n + '</b></div>';
         }).join("") + '</div>'
-      : '<div class="empty"><p>Aún no hay movimientos. Tus puntos se suman cuando confirmamos el pago de un pedido hecho con este ID.</p></div>');
+      : '<div class="empty"><p>AÃºn no hay movimientos. Tus puntos se suman cuando confirmamos el pago de un pedido hecho con este ID.</p></div>');
 
   h += '<div class="foot">' +
       '<button class="btn" data-x="close">Cerrar</button>' +
       '<button class="btn primary" id="pt-girar"' +
         (puede ? "" : " disabled") +
-      '>🎰 Girar ruleta (' + c.objetivo + ' pts)</button>' +
+      '>ðŸŽ° Girar ruleta (' + c.objetivo + ' pts)</button>' +
     '</div>';
 
   $("dbox").innerHTML = h;
@@ -463,9 +506,9 @@ function ptsEnlazar() {
   if (pin1) {
     var valPin1 = function() {
       var v = pin1.value.trim();
-      if (!v) setFieldValidation(pin1, false, "Ingresa un PIN numérico");
-      else if (!ptsPinValido(v)) setFieldValidation(pin1, false, "El PIN debe tener 4 a 6 números");
-      else setFieldValidation(pin1, true, "", "PIN válido");
+      if (!v) setFieldValidation(pin1, false, "Ingresa un PIN numÃ©rico");
+      else if (!ptsPinValido(v)) setFieldValidation(pin1, false, "El PIN debe tener 4 a 6 nÃºmeros");
+      else setFieldValidation(pin1, true, "", "PIN vÃ¡lido");
     };
     pin1.addEventListener("input", valPin1);
     pin1.addEventListener("blur", valPin1);
@@ -481,9 +524,9 @@ function ptsEnlazar() {
   if (ped) {
     var valPed = function() {
       var v = ped.value.trim().replace(/^#/, "");
-      if (!v) setFieldValidation(ped, false, "Ingresa el número de tu pedido");
-      else if (v.length < 4) setFieldValidation(ped, false, "Número de pedido incompleto");
-      else setFieldValidation(ped, true, "", "Formato válido");
+      if (!v) setFieldValidation(ped, false, "Ingresa el nÃºmero de tu pedido");
+      else if (v.length < 4) setFieldValidation(ped, false, "NÃºmero de pedido incompleto");
+      else setFieldValidation(ped, true, "", "Formato vÃ¡lido");
     };
     ped.addEventListener("input", valPed);
     ped.addEventListener("blur", valPed);
@@ -494,7 +537,7 @@ function ptsEnlazar() {
     var valPin = function() {
       var v = pin.value.trim();
       if (!v) setFieldValidation(pin, false, "Ingresa tu PIN");
-      else if (!ptsPinValido(v)) setFieldValidation(pin, false, "El PIN debe tener 4 a 6 números");
+      else if (!ptsPinValido(v)) setFieldValidation(pin, false, "El PIN debe tener 4 a 6 nÃºmeros");
       else setFieldValidation(pin, true, "", "PIN listo");
     };
     pin.addEventListener("input", valPin);
@@ -516,8 +559,8 @@ function crearCuentaPts() {
   if (!a || rueda.ocupado) return;
 
   if (!ptsPinValido(pin)) {
-    if ($("pt-pin1")) setFieldValidation($("pt-pin1"), false, "El PIN debe tener de 4 a 6 números");
-    $("pt-res").innerHTML = ptsMsgErr("El PIN debe tener de 4 a 6 números.");
+    if ($("pt-pin1")) setFieldValidation($("pt-pin1"), false, "El PIN debe tener de 4 a 6 nÃºmeros");
+    $("pt-res").innerHTML = ptsMsgErr("El PIN debe tener de 4 a 6 nÃºmeros.");
     return;
   }
 
@@ -550,10 +593,10 @@ function activarPin() {
   if (!a || rueda.ocupado) return;
 
   if (ped.length < 4 || !ptsPinValido(pin)) {
-    if (ped.length < 4 && $("pt-ped")) setFieldValidation($("pt-ped"), false, "Número de pedido no válido");
-    if (!ptsPinValido(pin) && $("pt-pin1")) setFieldValidation($("pt-pin1"), false, "El PIN debe tener 4 a 6 números");
+    if (ped.length < 4 && $("pt-ped")) setFieldValidation($("pt-ped"), false, "NÃºmero de pedido no vÃ¡lido");
+    if (!ptsPinValido(pin) && $("pt-pin1")) setFieldValidation($("pt-pin1"), false, "El PIN debe tener 4 a 6 nÃºmeros");
     $("pt-res").innerHTML = ptsMsgErr(
-      "Escribe el número de tu pedido y un PIN de 4 a 6 números."
+      "Escribe el nÃºmero de tu pedido y un PIN de 4 a 6 nÃºmeros."
     );
     return;
   }
@@ -587,8 +630,8 @@ function desbloquearPin() {
   if (!a || rueda.ocupado) return;
 
   if (!ptsPinValido(pin)) {
-    if ($("pt-pin")) setFieldValidation($("pt-pin"), false, "El PIN debe tener de 4 a 6 números");
-    $("pt-res").innerHTML = ptsMsgErr("El PIN debe tener de 4 a 6 números.");
+    if ($("pt-pin")) setFieldValidation($("pt-pin"), false, "El PIN debe tener de 4 a 6 nÃºmeros");
+    $("pt-res").innerHTML = ptsMsgErr("El PIN debe tener de 4 a 6 nÃºmeros.");
     return;
   }
 
@@ -608,7 +651,7 @@ function desbloquearPin() {
       rueda.pin = pin;
       a.premios = r.cupones || [];
       a.canjes = r.canjes || [];
-      pintarCuenta("🔓 PIN verificado. Ya puedes canjear premios o girar la ruleta.");
+      pintarCuenta("ðŸ”“ PIN verificado. Ya puedes canjear premios o girar la ruleta.");
     })
     .catch(function (e) {
       rueda.ocupado = false;
@@ -637,7 +680,7 @@ function canjearPremio(id) {
     return;
   }
 
-  if (!window.confirm('¿Canjear "' + p.nombre + '" por ' + p.costo + ' puntos?')) return;
+  if (!window.confirm('Â¿Canjear "' + p.nombre + '" por ' + p.costo + ' puntos?')) return;
 
   rueda.ocupado = true;
 
@@ -663,7 +706,7 @@ function canjearPremio(id) {
       }
 
       recargarCuenta(
-        '¡Canjeaste <b>' + esc(r.nombre) + '</b>! Te lo entregaremos pronto.'
+        'Â¡Canjeaste <b>' + esc(r.nombre) + '</b>! Te lo entregaremos pronto.'
       );
     })
     .catch(function (e) {
@@ -673,7 +716,7 @@ function canjearPremio(id) {
 }
 
 /* ==========================================
-   DIBUJAR RULETA — NEÓN GAMING
+   DIBUJAR RULETA â€” NEÃ“N GAMING
    ========================================== */
 
 function dibujarRueda() {
@@ -708,7 +751,7 @@ function dibujarRueda() {
 
   g.restore();
 
-  // Segmentos con degradados y separación luminosa.
+  // Segmentos con degradados y separaciÃ³n luminosa.
   R.forEach(function (p, i) {
     var a0 = -Math.PI / 2 + i * s;
     var a1 = a0 + s;
@@ -737,7 +780,7 @@ function dibujarRueda() {
     g.lineWidth = 2.5;
     g.stroke();
 
-    // Línea luminosa interior.
+    // LÃ­nea luminosa interior.
     g.beginPath();
 
     g.moveTo(
@@ -770,7 +813,7 @@ function dibujarRueda() {
     var max = n > 10 ? 12 : n > 7 ? 15 : 19;
 
     var texto = nombre.length > max
-      ? nombre.slice(0, max - 1) + "…"
+      ? nombre.slice(0, max - 1) + "â€¦"
       : nombre;
 
     g.textAlign = invertido ? "left" : "right";
@@ -805,7 +848,7 @@ function dibujarRueda() {
     g.restore();
   });
 
-  // Aro exterior oscuro y borde de neón.
+  // Aro exterior oscuro y borde de neÃ³n.
   g.save();
 
   g.beginPath();
@@ -831,7 +874,7 @@ function dibujarRueda() {
 
   g.restore();
 
-  // Pequeñas luces alrededor de la ruleta.
+  // PequeÃ±as luces alrededor de la ruleta.
   for (var j = 0; j < 36; j++) {
     var ang = (j / 36) * total;
     var radio = j % 3 === 0 ? 285 : 286;
@@ -861,7 +904,7 @@ function dibujarRueda() {
     g.restore();
   }
 
-  // Centro metálico.
+  // Centro metÃ¡lico.
   g.save();
 
   var centro = g.createRadialGradient(
@@ -909,7 +952,7 @@ function dibujarRueda() {
 /* ==========================================
    GIRAR RULETA
    El resultado siempre viene de Supabase;
-   la animación solo lo representa.
+   la animaciÃ³n solo lo representa.
    ========================================== */
 
 function girarRuleta() {
@@ -925,7 +968,7 @@ function girarRuleta() {
   rueda.girando = true;
 
   $("pt-girar").disabled = true;
-  $("pt-res").textContent = "Girando…";
+  $("pt-res").textContent = "Girandoâ€¦";
 
   /* La misma clave se reutiliza si hay que reintentar: un giro repetido no se cobra dos veces. */
   if (!rueda.pend || rueda.pend.t !== "g") {
@@ -956,7 +999,7 @@ function girarRuleta() {
       var n = (cfg.ruleta || []).length;
       var seg = n ? 360 / n : 360;
 
-      /* Si el administrador cambió la ruleta mientras girabas, no se anima el ángulo: solo se muestra el resultado. */
+      /* Si el administrador cambiÃ³ la ruleta mientras girabas, no se anima el Ã¡ngulo: solo se muestra el resultado. */
       var coincide = n > 0 && (r.segmentos | 0) === n;
 
       var i = Math.max(
@@ -973,15 +1016,15 @@ function girarRuleta() {
         a.puntos = r.puntos | 0;
 
         var txt = r.tipo === "nada"
-          ? "Esta vez no hubo premio. ¡Sigue acumulando puntos!"
+          ? "Esta vez no hubo premio. Â¡Sigue acumulando puntos!"
           : r.tipo === "puntos"
-            ? '¡Ganaste <b>' + esc(r.nombre) + '</b>! Ya está en tu saldo.'
+            ? 'Â¡Ganaste <b>' + esc(r.nombre) + '</b>! Ya estÃ¡ en tu saldo.'
             : r.tipo === "manual"
-              ? '¡Ganaste <b>' + esc(r.nombre) +
+              ? 'Â¡Ganaste <b>' + esc(r.nombre) +
                 '</b>! Te lo entregaremos pronto.'
-              : '¡Ganaste <b>' + esc(r.nombre) +
-                '</b>! Tu cupón: <b>' + esc(r.codigo) +
-                '</b> (úsalo en el carrito).';
+              : 'Â¡Ganaste <b>' + esc(r.nombre) +
+                '</b>! Tu cupÃ³n: <b>' + esc(r.codigo) +
+                '</b> (Ãºsalo en el carrito).';
 
         recargarCuenta(txt);
       };
@@ -1029,7 +1072,7 @@ function girarRuleta() {
     .catch(function (e) {
       rueda.girando = false;
 
-      /* No se borra rueda.pend: si el giro sí se hizo, el reintento devuelve el mismo resultado sin cobrar de nuevo. */
+      /* No se borra rueda.pend: si el giro sÃ­ se hizo, el reintento devuelve el mismo resultado sin cobrar de nuevo. */
       pintarCuenta(ptsMsgErr(ptsErr(e)));
     });
 }

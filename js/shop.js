@@ -144,6 +144,20 @@ return '<section class="fx-sec' +
 
 };
 
+/* Con un catálogo pequeño, las secciones editoriales repetirían las mismas fichas. */
+var ok = act.filter(function(p) {
+return p.active && !agotado(p);
+});
+
+if (ok.length < 4) {
+var smallDigitales = act.filter(function(p) {
+return p.active && p.tipo === "virtual";
+});
+return smallDigitales.some(esDigitalFreeFire) && typeof fxRewards === "function"
+? fxRewards(sec)
+: "";
+}
+
 /* Categorías */
 if (cats.length) {
 h += sec(
@@ -195,11 +209,6 @@ h += sec(
 );
 
 }
-
-/* Productos activos y disponibles */
-var ok = act.filter(function(p) {
-return p.active && !agotado(p);
-});
 
 /* Destacados */
 var f = ok.filter(function(p) { return p.tipo !== "virtual"; }).length > 3

@@ -1,5 +1,5 @@
 /* Cuenta cliente: registro seguro con Supabase, compras propias y comprobantes. */
-var accountView="login",accountMessage="",accountBusy=false,accountOrders=[],accountOrdersLoaded=false,accountReturnToCheckout=false,lastPurchasedOrder=null;
+var accountView="login",accountMessage="",accountBusy=false,accountOrders=[],accountOrdersLoaded=false,accountReturnToCheckout=false,lastPurchasedOrder=null,accountNameDraft="",accountEmailDraft="";
 
 function abrirCuenta(retomarCheckout){
   accountReturnToCheckout=!!retomarCheckout;
@@ -12,6 +12,7 @@ function abrirCuenta(retomarCheckout){
 
 function renderCuenta(){
   var box=$("dbox"),user=Backend.customer();
+  box.classList.toggle("account-login-view",!!Backend.accountsReady&&!user);
   if(!Backend.accountsReady){
     box.innerHTML='<h2>Cuenta de cliente</h2><p class="account-note" role="status">El registro, las compras y los comprobantes requieren la conexión segura de la tienda. Aún no está activada para recibir pedidos reales.</p>'+
       (Backend.ready?'<p class="meta">La prueba local guarda pedidos solo en este navegador y no crea cuentas de cliente.</p>':'<p class="meta">Antes de activarla, el administrador debe verificar la base de datos y configurar el checkout seguro.</p>')+
@@ -37,8 +38,8 @@ function renderCuenta(){
   box.innerHTML='<span class="account-eyebrow">NEXORA · CLIENTES</span><h2>'+(registering?'Crear cuenta':'Iniciar sesión')+'</h2>'+
     '<p class="meta">Usa tu cuenta para asociar tus pedidos y consultar sus comprobantes.</p>'+
     (accountMessage?'<p class="account-note" role="status">'+esc(accountMessage)+'</p>':"")+
-    '<div class="f">'+(registering?'<label class="field-label" for="account-name">Nombre completo</label><input id="account-name" maxlength="80" autocomplete="name" required>':"")+
-    '<label class="field-label" for="account-email">Correo electrónico</label><input id="account-email" type="email" maxlength="254" autocomplete="email" required>'+
+    '<div class="f">'+(registering?'<label class="field-label" for="account-name">Nombre completo</label><input id="account-name" maxlength="80" autocomplete="name" value="'+esc(accountNameDraft)+'" required>':"")+
+    '<label class="field-label" for="account-email">Correo electrónico</label><input id="account-email" type="email" maxlength="254" autocomplete="email" value="'+esc(accountEmailDraft)+'" required>'+
     '<label class="field-label" for="account-password">Contraseña</label><input id="account-password" type="password" minlength="8" maxlength="128" autocomplete="'+(registering?'new-password':'current-password')+'" required>'+
     (registering?'<label class="field-label" for="account-password-repeat">Repite la contraseña</label><input id="account-password-repeat" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>':"")+'</div>'+
     '<div class="err" role="alert" aria-live="polite">'+(accountBusy?'Procesando…':'')+'</div>'+
@@ -60,6 +61,7 @@ function enviarFormularioCuenta(){
   if(!Backend.accountsReady){renderCuenta();return Promise.resolve(false)}
   var registering=accountView==="register",name=registering?$("account-name").value.trim():"",email=$("account-email").value.trim(),password=$("account-password").value,
       repeated=registering?$("account-password-repeat").value:"";
+  accountNameDraft=name;accountEmailDraft=email;
   if(registering&&name.length<2){accountMessage="Escribe tu nombre completo.";renderCuenta();return Promise.resolve(false)}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){accountMessage="Escribe un correo válido.";renderCuenta();return Promise.resolve(false)}
   if(password.length<8){accountMessage="La contraseña debe tener al menos 8 caracteres.";renderCuenta();return Promise.resolve(false)}
@@ -69,7 +71,7 @@ function enviarFormularioCuenta(){
   return request.then(function(result){
     accountBusy=false;
     if(registering&&result.requiresEmailConfirmation){accountView="login";accountMessage="Cuenta creada. Confirma tu correo y luego inicia sesión.";renderCuenta();return false}
-    accountOrders=[];accountOrdersLoaded=false;
+    accountOrders=[];accountOrdersLoaded=false;accountNameDraft="";accountEmailDraft="";
     var user=Backend.customer();
     if(user&&user.name&&!chk.nombre)chk.nombre=user.name;
     if(accountReturnToCheckout){accountReturnToCheckout=false;$("dlg").close();step="datos";drawCart();renderAll();return true}

@@ -4,7 +4,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const approved = new Set([
   "index.html", "admin.html",
-  "css/base.css", "css/store.css", "css/admin.css", "css/rgb.css", "css/motion.css", "css/hud.css", "css/shop.css", "css/perfil.css", "css/final.css",
+  "css/base.css", "css/store.css", "css/admin.css", "css/rgb.css", "css/motion.css", "css/hud.css", "css/shop.css", "css/perfil.css", "css/final.css", "css/refresh.css",
   "js/textos.js", "js/contracts.js", "js/core.js", "js/backend.js", "js/cookies.js", "js/puntos.js", "js/ui.js", "js/recibo.js", "js/account.js", "js/store.js", "js/hud.js", "js/shop.js", "js/perfil.js", "js/main.js", "js/motion.js", "js/final.js", "js/admin.js",
   "js/config.js", "data/datos.js"
 ]);

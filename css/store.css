@@ -2,7 +2,7 @@
 .chips,.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
 .chip{padding:6px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:.92rem}
 .chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,210px);gap:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:18px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
 .pic{aspect-ratio:1/1;background:var(--bg);display:grid;place-items:center;color:var(--muted);font-size:.85rem;position:relative}
 .pic img{width:100%;height:100%;object-fit:cover}
@@ -209,10 +209,10 @@
   transform: translateY(-1px);
 }
 .chip[aria-pressed="true"] {
-  background: linear-gradient(135deg, #1d4ed8, #3b82f6) !important;
-  color: #ffffff !important;
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.45) !important;
+  background: linear-gradient(120deg, #6cebd0, #b2f2de);
+  color: #081410;
+  border-color: transparent;
+  box-shadow: 0 7px 20px rgba(89, 229, 203, 0.18);
   font-weight: 700;
 }
 
@@ -257,16 +257,16 @@
 
 /* Botones de acción y carrito estilo Gaming */
 .btn.primary {
-  background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
-  color: #ffffff !important;
-  border-color: #3b82f6 !important;
-  font-weight: 700 !important;
+  background: linear-gradient(135deg, #73f1d4, #50d6c4);
+  color: #071411;
+  border-color: rgba(116, 255, 224, 0.7);
+  font-weight: 800;
   letter-spacing: 0.03em;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 8px 24px rgba(54, 213, 187, 0.18);
 }
 .btn.primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55) !important;
+  filter: brightness(1.045);
+  box-shadow: 0 12px 30px rgba(54, 213, 187, 0.24);
 }
 
 

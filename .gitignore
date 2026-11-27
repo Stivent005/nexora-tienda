@@ -29,6 +29,7 @@ Thumbs.db
 # Archivos locales de herramientas
 .vscode/
 .idea/
+.wrangler/
 
 # Respaldos adicionales del proyecto
 js/backend_backup_*.js

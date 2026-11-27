@@ -33,12 +33,12 @@
   /* Cursor personalizado: también se apaga si la preferencia cambia en esta sesión. */
   var H = document.documentElement;
   var KEY = "fx_cursor";
-  var on = true;
+  var on = false;
   var mx = -100, my = -100, rx = -100, ry = -100, raf = 0;
   var dialogList = [].slice.call(document.querySelectorAll("dialog"));
   var dot = null, ring = null, toggle = null, cursorActive = false;
 
-  try { on = localStorage.getItem(KEY) !== "off"; } catch (error) {}
+  try { on = localStorage.getItem(KEY) === "on"; } catch (error) {}
 
   function syncCursor() {
     H.classList.toggle("cur-on", on && !dialogList.some(function (dialog) { return dialog.open; }));

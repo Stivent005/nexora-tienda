@@ -131,7 +131,7 @@ function renderStore() {
     else if (/arma|skin|caja/i.test(lc)) ico = "🔫 ";
     else if (/tarjeta|sub|membres/i.test(lc)) ico = "💳 ";
     else if (/ropa|traje|personaje/i.test(lc)) ico = "👕 ";
-    return ico + esc(c) + ' <span style="font-size:0.75em;opacity:0.75">▾</span>';
+    return ico + esc(c);
   };
 
   if (cats.length) {
@@ -344,6 +344,7 @@ function discount() {
   /* Vista previa del carrito. El servidor debe volver a calcular el descuento y el total. */
   var sb = Number(subtotal()), value = Number(coupon.valor);
   if (!Number.isFinite(sb) || sb <= 0 || !Number.isFinite(value) || value <= 0) return 0;
+  if (Number(coupon.compra_minima||0)>sb) return 0;
   if (coupon.tipo === "pct") return value <= 100 ? Math.min(sb, Math.round(sb * value / 100)) : 0;
   if (coupon.tipo !== "fijo") return 0;
   return Math.min(sb, Math.floor(value));
@@ -1115,7 +1116,7 @@ function applyCoupon() {
   }
 
   /* Cupones de la ruleta: se validan en la base de datos y son de un solo uso. */
-  Backend.rpc("validar_premio", {
+  Backend.rpc("validar_premio_cliente", {
     p_codigo: c
   }).then(function (r) {
     if (
@@ -1123,10 +1124,15 @@ function applyCoupon() {
       (r.tipo === "pct" || r.tipo === "fijo") &&
       Number(r.valor) > 0
     ) {
+      var minimo=Number(r.compra_minima)||0;
+      if(minimo>subtotal()){
+        return fin(null,"Este cupón requiere una compra mínima de "+fmt.format(minimo)+" COP.");
+      }
       fin({
         codigo: c,
         tipo: r.tipo,
         valor: Number(r.valor),
+        compra_minima:minimo,
         activo: true
       }, T("carrito.cuponOk"));
     } else {

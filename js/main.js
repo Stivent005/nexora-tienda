@@ -31,7 +31,7 @@ document.addEventListener("click",function(e){
   else if(d.q){var id=d.id,product=items.find(function(p){return p.id===id}),limit=product?stockLimit(product):0,next=(cart[id]||0)+Number(d.q);next=Math.max(0,Math.min(limit,next));if(next===0)delete cart[id];else cart[id]=next;lsSet("tienda_carrito",cart);updateCount();drawCart()}
   else if(d.x==="close")$("dlg").close();
   else if(d.x==="account")abrirCuenta(false);
-  else if(d.x==="account-mode"){accountView=d.mode==="register"?"register":"login";accountMessage="";renderCuenta()}
+  else if(d.x==="account-mode"){$("account-name")&&(accountNameDraft=$("account-name").value);$("account-email")&&(accountEmailDraft=$("account-email").value);accountView=d.mode==="register"?"register":"login";accountMessage="";renderCuenta()}
   else if(d.x==="account-submit")enviarFormularioCuenta();
   else if(d.x==="account-logout")cerrarCuentaCliente();
   else if(d.x==="account-orders")cargarComprasCuenta();

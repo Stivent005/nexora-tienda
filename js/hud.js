@@ -4,6 +4,7 @@
   var motionQuery=window.matchMedia?window.matchMedia("(prefers-reduced-motion: reduce)"):null,
       RM=!!(motionQuery&&motionQuery.matches),
       mob=innerWidth<760||/Mobi|Android/i.test(navigator.userAgent),
+      adminPage=document.body.classList.contains("admin-page"),
       $=function(i){return document.getElementById(i)};
 
   /* ---- Loader: se quita en cuanto carga la página (mínimo 650 ms para que se vea) ---- */
@@ -66,12 +67,14 @@
     var w=h.textContent.trim().split(/\s+/);h.classList.add("sp");h.setAttribute("aria-label",h.textContent);h.textContent="";
     w.forEach(function(t,i){var a=document.createElement("span"),b=document.createElement("span");a.className="w";a.style.setProperty("--w",i);a.setAttribute("aria-hidden","true");b.textContent=t;a.appendChild(b);h.appendChild(a);h.appendChild(document.createTextNode(" "))});
   }
-  if($("app")){new MutationObserver(split).observe($("app"),{childList:true});split()}
+  if($("app")&&!adminPage){new MutationObserver(split).observe($("app"),{childList:true});split()}
 
   /* ---- Barra de progreso de scroll: se conserva como feedback estático ---- */
-  var bar=document.createElement("div"),sk=0;bar.id="hud-prog";bar.setAttribute("aria-hidden","true");document.body.appendChild(bar);
+  if(!adminPage){
+    var bar=document.createElement("div"),sk=0;bar.id="hud-prog";bar.setAttribute("aria-hidden","true");document.body.appendChild(bar);
   function onScroll(){if(sk)return;sk=1;requestAnimationFrame(function(){sk=0;var h=document.documentElement;bar.style.transform="scaleX("+(scrollY/Math.max(1,h.scrollHeight-innerHeight))+")"})}
-  addEventListener("scroll",onScroll,{passive:true});
+    addEventListener("scroll",onScroll,{passive:true});
+  }
 
   /* ---- Efectos de puntero y fondo: se conectan/desconectan al cambiar la preferencia ---- */
   var pointerActive=false,heroFrame=0,heroPending=null,fx=null;
@@ -101,7 +104,7 @@
     var canvas=document.createElement("canvas");canvas.id="bg-fx";canvas.setAttribute("aria-hidden","true");document.body.prepend(canvas);
     var ctx=canvas.getContext("2d");
     var dpr=Math.min(devicePixelRatio||1,1.5),width=0,height=0;
-    var count=(mob||lite)?24:60,particles=[],raf=0,resizeTimer=0,active=false;
+    var count=(mob||lite)?18:40,particles=[],raf=0,resizeTimer=0,active=false;
     var lastTime=0,slowFrames=0,mx=0,my=0;
 
     function resize(){width=canvas.width=Math.round(innerWidth*dpr);height=canvas.height=Math.round(innerHeight*dpr)}
@@ -151,7 +154,7 @@
   }
 
   function startMotion(){
-    if(RM)return;
+    if(RM||adminPage)return;
     if(!fx)fx=makeBackdrop();
     if(!pointerActive&&!mob){document.addEventListener("mousemove",onPointerMove,{passive:true});pointerActive=true}
     fx.start();

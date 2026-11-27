@@ -378,11 +378,14 @@ var Backend=(function(){
     }
   }
 
-  function rpcChecked(nombre,args){
+  function rpcChecked(nombre,args,timeoutMs){
     return call(
       "POST",
       "/rest/v1/rpc/"+nombre,
-      args||{}
+      args||{},
+      undefined,
+      false,
+      timeoutMs
     )
     .then(function(r){
 
@@ -405,7 +408,7 @@ var Backend=(function(){
     var path="/rest/v1/pedido_entregas?select=id,pedido_id,producto_id,tipo,cantidad,estado,datos_entrega&order=id.asc";
     if(ultimoId!=null)path+="&id=gt."+encodeURIComponent(ultimoId);
 
-    return call("GET",path).then(function(filas){
+    return call("GET",path,undefined,undefined,false,15000).then(function(filas){
       if(!filas.length)return entregas;
       filas.forEach(function(fila){entregas.push(fila);});
       return listarEntregasExistentes(entregas,filas[filas.length-1].id);
@@ -677,6 +680,26 @@ var Backend=(function(){
       });
     },
 
+    girarRuletaCliente:function(clave){
+      if(!accountsReady||!customerUser||!token){
+        var authError=new Error("Inicia sesión en tu cuenta para jugar.");
+        authError.code="AUTH_REQUIRED";
+        return Promise.reject(authError);
+      }
+      return rpcChecked("nexora_girar_ruleta_cliente",{p_clave:String(clave||"")});
+    },
+
+    completarPremioRuletaCliente:function(giro,ffId){
+      if(!accountsReady||!customerUser||!token){
+        var authError=new Error("Inicia sesión en tu cuenta para registrar la entrega.");
+        authError.code="AUTH_REQUIRED";
+        return Promise.reject(authError);
+      }
+      return rpcChecked("nexora_completar_premio_ruleta_cliente",{
+        p_giro:Number(giro),p_ff_id:String(ffId||"").replace(/\D/g,"")
+      });
+    },
+
     procesarPuntosPedido:function(pedidoId){
 
       return call(
@@ -906,7 +929,7 @@ var Backend=(function(){
 
       return call(
         "GET",
-        "/rest/v1/catalogo_premios?select=id,nombre,descripcion,tipo,valor,peso,stock,activo&order=id.asc"
+        "/rest/v1/catalogo_premios?select=id,nombre,descripcion,tipo,valor,peso,stock,activo,vence_dias,compra_minima&order=id.asc"
       );
     },
 
@@ -931,18 +954,14 @@ var Backend=(function(){
     },
 
     girosAdmin:function(){
-
-      return call(
-        "GET",
-        "/rest/v1/giros?select=id,ff_id,premio,puntos_ganados,costo,creado&order=creado.desc&limit=50"
-      );
+      return rpcChecked("admin_ruleta_giros_cliente",{}).then(function(r){return Array.isArray(r)?r:[];});
     },
 
     guardarRuleta:function(lista){
 
       return call(
         "POST",
-        "/rest/v1/rpc/admin_guardar_ruleta",
+        "/rest/v1/rpc/admin_guardar_ruleta_cliente",
         {
           p_premios:lista
         }
@@ -1201,21 +1220,27 @@ var Backend=(function(){
 
       var pedidoReq=call(
         "GET",
-        "/rest/v1/pedidos?select=id,estado,creado,datos&order=creado.desc&limit=500"
-      );
+        "/rest/v1/pedidos?select=id,estado,creado,datos&order=creado.desc&limit=500",
+        undefined,
+        undefined,
+        false,
+        15000
+      ).catch(function(e){var x=e instanceof Error?e:new Error(String(e));x.message="No se pudo cargar pedidos: "+x.message;throw x;});
 
       var pagoReq=rpcChecked(
         "admin_listar_pagos_pedidos",
-        {}
-      );
+        {},
+        15000
+      ).catch(function(e){var x=e instanceof Error?e:new Error(String(e));x.message="No se pudo cargar pagos: "+x.message;throw x;});
 
       var entregaReq=rpcChecked(
         "admin_listar_entregas_pedidos",
-        {}
+        {},
+        15000
       ).catch(function(e){
         if(e.code!=="PGRST202")throw e;
         return listarEntregasExistentes([]);
-      });
+      }).catch(function(e){var x=e instanceof Error?e:new Error(String(e));x.message="No se pudieron cargar entregas: "+x.message;throw x;});
 
       return Promise.all([
         pedidoReq,
@@ -1412,6 +1437,17 @@ var Backend=(function(){
           )
         }
       );
+    },
+
+    registrarAbono:function(pedidoId,monto,metodo,referencia,comprobante,nota){
+      return rpcChecked("admin_registrar_abono",{
+        p_pedido_id:String(pedidoId||""),
+        p_monto:Number(monto),
+        p_metodo:String(metodo||"Pago manual"),
+        p_referencia:String(referencia||""),
+        p_comprobante:String(comprobante||""),
+        p_nota:String(nota||"")
+      });
     },
 
     registrarReintegro:function(

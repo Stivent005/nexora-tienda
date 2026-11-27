@@ -84,3 +84,23 @@ html:not(.cur-on) #cur-dot,html:not(.cur-on) #cur-ring{opacity:0}
 .account-switch{justify-content:flex-start;flex-wrap:wrap;margin-top:14px;color:var(--muted)}
 #dbox:has(.account-orders),#dbox:has(.account-note){max-width:760px}
 @media print{.account-head,.account-switch,.account-order button{display:none!important}}
+
+/* Inicio de sesión: jerarquía clara y controles táctiles, manteniendo la identidad Nexora. */
+#dlg:has(#dbox.account-login-view){width:min(480px,calc(100vw - 24px));max-height:min(88dvh,760px);border-color:rgba(34,211,238,.34);box-shadow:0 28px 90px rgba(0,0,0,.62),0 0 38px rgba(34,211,238,.11)}
+#dbox.account-login-view{position:relative;isolation:isolate;gap:16px;padding:clamp(20px,5vw,30px);overflow:auto;background:radial-gradient(360px 220px at 100% 0%,rgba(34,211,238,.12),transparent 70%),linear-gradient(145deg,rgba(14,24,44,.98),rgba(7,11,23,.99))}
+#dbox.account-login-view::before{content:"N";position:absolute;z-index:-1;right:24px;top:22px;width:38px;height:38px;display:grid;place-items:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:linear-gradient(145deg,rgba(34,211,238,.15),rgba(139,92,246,.12));color:rgba(234,242,255,.55);font:800 1.15rem "Rajdhani",system-ui,sans-serif;box-shadow:inset 0 1px rgba(255,255,255,.08),0 5px 0 rgba(0,0,0,.2)}
+#dbox.account-login-view>.account-eyebrow{width:max-content;max-width:calc(100% - 50px);padding:5px 9px;border:1px solid rgba(34,211,238,.2);border-radius:8px;background:rgba(34,211,238,.06)}
+#dbox.account-login-view>h2{font-size:clamp(1.7rem,7vw,2.15rem);line-height:1.05;letter-spacing:.015em}
+#dbox.account-login-view>.meta{max-width:38ch;margin:-5px 0 0;line-height:1.6}
+#dbox.account-login-view .f{gap:8px}
+#dbox.account-login-view .field-label{margin-top:3px;color:#b8c8e1;font-size:.84rem;font-weight:800;letter-spacing:.025em}
+#dbox.account-login-view input:not([type=checkbox]):not([type=radio]):not([type=file]){min-height:48px;border-color:rgba(143,163,196,.25);background:rgba(4,8,18,.72);transition:border-color .18s,box-shadow .18s,background-color .18s}
+#dbox.account-login-view input:focus{border-color:var(--accent);background:rgba(5,13,26,.95);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+#dbox.account-login-view .account-switch{padding-top:13px;border-top:1px solid rgba(143,163,196,.16)}
+#dbox.account-login-view .foot{gap:10px;margin-top:0}
+#dbox.account-login-view .foot .btn{min-height:44px}
+#dbox.account-login-view .foot .btn.primary{box-shadow:0 8px 20px rgba(34,211,238,.18),inset 0 1px rgba(255,255,255,.2);transition:transform .14s,box-shadow .18s,filter .18s}
+#dbox.account-login-view .foot .btn.primary:hover{box-shadow:0 10px 26px rgba(34,211,238,.28),inset 0 1px rgba(255,255,255,.2);filter:brightness(1.06)}
+#dbox.account-login-view .foot .btn.primary:active{transform:translateY(2px);box-shadow:0 3px 8px rgba(34,211,238,.16)}
+@media(max-width:420px){#dbox.account-login-view{gap:13px;padding:20px}#dbox.account-login-view .foot{display:grid;grid-template-columns:1fr 1fr}#dbox.account-login-view .foot .btn{width:100%;padding-inline:8px}}
+@media(prefers-reduced-motion:reduce){#dbox.account-login-view input:not([type=checkbox]):not([type=radio]):not([type=file]),#dbox.account-login-view .foot .btn.primary{transition:none!important}#dbox.account-login-view .foot .btn.primary:active{transform:none}}
