@@ -55,7 +55,7 @@ function fxDetails(p) {
 function fxCard(p, star) {
 var off = p.offer && p.offerPrice > 0;
 var out = agotado(p);
-var im = safeImg(p.image);
+var im = safeProductImg(p.image);
 
 return '<article class="card product-card-3d ' +
  fxRar(p) + '" data-tilt="card" data-product-id="' +

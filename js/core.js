@@ -3,8 +3,10 @@ var $=function(i){return document.getElementById(i)};
 var fmt=new Intl.NumberFormat("es-CO",{style:"currency",currency:CONFIG.moneda,maximumFractionDigits:0});
 /* Escapa texto para meterlo en HTML o en atributos (incluye comillas, que antes no se escapaban) */
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
-/* Solo deja pasar imágenes en data:image/... (las fotos que sube la gente se guardan así). Cualquier otra cosa se descarta. */
+/* Fotos cargadas por el panel, guardadas como data URI. */
 function safeImg(u){return typeof u==="string"&&u.length<900000&&/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(u)?u:""}
+/* Los productos también pueden usar recursos raster publicados dentro de /images. */
+function safeProductImg(u){return safeImg(u)||((typeof u==="string"&&/^\/images\/[a-z0-9_-]{1,80}\.(?:png|jpe?g|webp)$/i.test(u))?u:"")}
 /* Solo enlaces https:// (evita javascript: y similares) */
 function safeUrl(u){return typeof u==="string"&&/^https:\/\/[^\s"'<>]+$/i.test(u.trim())?u.trim():""}
 /* Textos de la tienda: viven en js/textos.js. T() devuelve texto plano; TH() devuelve HTML ya escapado
@@ -23,7 +25,7 @@ var REMOTO=!!(CONFIG.supabase&&CONFIG.supabase.enabled===true&&CONFIG.supabase.u
 var cfg=REMOTO?Object.assign({},CONFIG):Object.assign({},CONFIG,DATOS_INICIALES.config||{},lsGet("tienda_config",{}));
 /* Deja cada producto con los tipos y largos correctos (viene del respaldo o del navegador y nunca se debe confiar a ciegas) */
 function limpiarProducto(p){
-  return NexoraContracts.normalizeProduct(p, {makeId:uid, safeImage:safeImg});
+  return NexoraContracts.normalizeProduct(p, {makeId:uid, safeImage:safeProductImg});
 }
 function esDigitalFreeFire(p){
   return !!(p&&p.tipo==="virtual"&&/free\s*fire|\bff\b|diamante|gemas?/i.test(String(p.name||"")+" "+String(p.category||"")));

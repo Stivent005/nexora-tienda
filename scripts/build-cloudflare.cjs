@@ -45,6 +45,9 @@ for (const htmlFile of ["index.html", "admin.html"]) {
   }
 }
 
+// Recurso compartido por los paquetes digitales iniciales del catálogo Supabase.
+addAsset("images/diamantes-free-fire.png");
+
 const config = fs.readFileSync(path.join(root, "js/config.js"), "utf8");
 if (/service_role|secret_key/i.test(config) || !/anonKey\s*:\s*["'](?:sb_publishable_|eyJ)/.test(config)) {
   throw new Error("La configuración Supabase no pasó la comprobación de clave pública.");

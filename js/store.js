@@ -173,7 +173,7 @@ function renderStore() {
       v.map(function (p, idx) {
         var off = p.offer && p.offerPrice > 0;
         var out = agotado(p);
-        var im = safeImg(p.image);
+        var im = safeProductImg(p.image);
         var pid = esc(p.id);
 
         return '<article class="card product-card-3d tilt-card ' +
