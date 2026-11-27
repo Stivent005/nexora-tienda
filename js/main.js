@@ -46,6 +46,7 @@ document.addEventListener("click",function(e){
   else if(d.pm){chk.pay=d.pm;drawCart()}
   else if(d.copy!==undefined)copiar(d.copy,t);
   else if(d.x==="msave")saveMetodo();
+  else if(d.x==="qr-remove"){mQr="";var qrInput=$("m-qrf");if(qrInput)qrInput.value="";renderMetodoQrPreview()}
   else if(d.x==="send")sendOrder();else if(d.x==="cup")applyCoupon();else if(d.x==="osave")saveOrder();
   else if(d.x==="save")saveForm();
   else if(d.x==="pin")checkPin();

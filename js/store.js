@@ -424,10 +424,9 @@ function disponibles(L) {
 
   return pagos().filter(function (m) {
     return !(
-      (m.gateway === "mercadopago" && (!Backend.remote || !Backend.accountsReady)) ||
       (m.tipo === "efectivo" && hv) ||
       (m.tipo === "link" && !safeUrl(m.enlace)) ||
-      (m.tipo === "transfer" && !m.cuenta && !safeImg(m.qr))
+      (m.tipo === "transfer" && (!m.cuenta || !safeImg(m.qr)))
     );
   });
 }
@@ -539,22 +538,26 @@ function detallePago(m) {
     h += '<div>' + esc(m.instr || T("pago.efectivoDefecto")) + '</div>';
   } else {
     if (m.tipo === "transfer") {
+      if (qr) {
+        h += '<figure class="payment-qr-card">' +
+          '<span class="payment-qr-label">ESCANEA PARA PAGAR</span>' +
+          '<img class="qr" src="' + qr + '" alt="' + esc(T("pago.qrAlt")) + '">' +
+          '<figcaption>Escanea este código desde la aplicación de pago.</figcaption>' +
+        '</figure>';
+      }
+
       if (m.cuenta) {
-        h += '<div class="meta">' + esc(T("pago.envia")) + '</div>' +
-          '<div class="acct"><span>' + esc(m.cuenta) + '</span>' +
+        h += '<div class="payment-destination">' +
+          '<div class="payment-destination-copy"><span class="payment-qr-label">NÚMERO O CUENTA</span>' +
+          '<b class="acct-number">' + esc(m.cuenta) + '</b></div>' +
           '<button class="btn sm" data-copy="' + esc(m.cuenta) + '">' +
             esc(T("pago.copiar")) +
           '</button></div>' +
           (m.titular
-            ? '<div class="meta">' +
+            ? '<div class="payment-account-holder meta">' +
                 esc(T("pago.aNombre", { titular: m.titular })) +
               '</div>'
             : '');
-      }
-
-      if (qr) {
-        h += '<img class="qr" src="' + qr +
-          '" alt="' + esc(T("pago.qrAlt")) + '">';
       }
     }
 

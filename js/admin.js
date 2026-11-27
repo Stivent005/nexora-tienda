@@ -365,13 +365,15 @@ function renderAdmin(){
           :'<div class="admin-empty" role="status">'+(sourceOrders.length?(paymentView?"No hay pagos que coincidan con la búsqueda.":"No hay pedidos que coincidan con la búsqueda."):(paymentView?"Aún no hay pagos asociados a pedidos.":"Aún no hay pedidos."))+'</div>'));
     if(paymentView){
       var ms=metodos();
-      if(ms.some(function(m){return m.activo!==false&&((m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace))}))
-        h+='<div class="msg err">Hay métodos activos sin configurar: no se mostrarán a tus clientes hasta que agregues su número, cuenta o enlace.</div>';
-      h+='<section class="admin-panel admin-methods-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">CONFIGURACIÓN</span><h2>Métodos de pago</h2></div><button class="btn primary" id="madd">Agregar método</button></div><p class="meta">Configura las opciones que tus clientes pueden elegir. Editar un método no confirma los pagos de pedidos existentes.</p>';
+      if(ms.some(function(m){return m.activo!==false&&((m.tipo==="transfer"&&(!m.cuenta||!safeImg(m.qr)))||(m.tipo==="link"&&!m.enlace))}))
+        h+='<div class="msg err">Hay métodos activos incompletos: agrega el número y el QR oficial, o termina de configurar el enlace para que se muestren.</div>';
+      h+='<section class="admin-panel admin-methods-panel"><div class="admin-panel-head"><div><span class="admin-eyebrow">CONFIGURACIÓN</span><h2>Métodos de pago</h2></div><button class="btn primary" id="madd">Agregar método</button></div><p class="meta">Configura el QR y el número que reciben el pago. Los pedidos quedan pendientes hasta verificar el dinero recibido en la cuenta.</p>';
       h+='<div class="list">'+ms.map(function(m,i){
-        var falta=(m.tipo==="transfer"&&!m.cuenta&&!m.qr)||(m.tipo==="link"&&!m.enlace);
-        var det=m.gateway==="mercadopago"?"Mercado Pago automático · Checkout Pro":m.tipo==="efectivo"?"Contra entrega (efectivo)":m.tipo==="link"?"Enlace de pago en línea":"Cuenta o billetera: "+esc(m.cuenta||(m.qr?"solo QR":"—"));
-        return '<div class="row" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center"><div><b>'+ico(m)+' '+esc(m.nombre)+'</b><span class="tag'+(m.activo!==false?' off':'')+'">'+(m.activo!==false?"Activo":"Apagado")+'</span><div class="meta">'+det+(falta?' • <span style="color:var(--danger)">Falta configurar</span>':'')+'</div></div><div class="acts" style="flex-wrap:wrap"><button class="btn sm" data-mv="-1" data-i="'+i+'" aria-label="Subir">▲</button><button class="btn sm" data-mv="1" data-i="'+i+'" aria-label="Bajar">▼</button><button class="btn sm" data-mt="'+i+'">'+(m.activo!==false?"Apagar":"Activar")+'</button><button class="btn sm" data-me="'+i+'">Editar</button><button class="btn sm danger" data-md="'+i+'">'+(pdel==="m"+i?"Confirmar":"Eliminar")+'</button></div></div>';
+        var automatico=adminEsPagoAutomatico(m),activo=!automatico&&m.activo!==false;
+        var falta=(m.tipo==="transfer"&&(!m.cuenta||!safeImg(m.qr)))||(m.tipo==="link"&&!m.enlace);
+        var det=automatico?"Pago automático pausado por ahora":m.tipo==="efectivo"?"Contra entrega (efectivo)":m.tipo==="link"?"Enlace de pago manual":"Número o cuenta: "+esc(m.cuenta||"—");
+        var qr=safeImg(m.qr);
+        return '<div class="row admin-method-row" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center"><div class="admin-method-main"><b>'+ico(m)+' '+esc(m.nombre)+'</b><span class="tag'+(activo?'':' off')+'">'+(automatico?"Pausado":activo?"Activo":"Apagado")+'</span><div class="meta">'+det+(falta?' • <span style="color:var(--danger)">'+(m.qr&&!m.cuenta?"Agrega el número que acompaña al QR":m.cuenta&&!m.qr?"Sube el QR oficial":"Completa el número y el QR")+'</span>':'')+'</div>'+(qr?'<img class="admin-method-qr" src="'+qr+'" alt="Código QR de '+esc(m.nombre)+'">':'')+'</div><div class="acts" style="flex-wrap:wrap"><button class="btn sm" data-mv="-1" data-i="'+i+'" aria-label="Subir">▲</button><button class="btn sm" data-mv="1" data-i="'+i+'" aria-label="Bajar">▼</button>'+(automatico?'<span class="meta">Pausado por ahora</span>':'<button class="btn sm" data-mt="'+i+'">'+(activo?"Apagar":"Activar")+'</button><button class="btn sm" data-me="'+i+'">Editar</button>')+'<button class="btn sm danger" data-md="'+i+'">'+(pdel==="m"+i?"Confirmar":"Eliminar")+'</button></div></div>';
       }).join("")+'</div>';
       if(!ms.length)h+='<div class="admin-empty">Aún no hay métodos de pago configurados.</div>';
       h+='</section>';
@@ -768,27 +770,34 @@ function saveOrder(){
 
 /* ---------- Métodos de pago ---------- */
 var mQr="",mIdx=-1;
-function svm(ms){cfg=Object.assign({},cfg,{metodos:ms});guardarCfg();renderAdmin()}
+function adminEsPagoAutomatico(m){return !!(m&&(m.gateway==="mercadopago"||m.id==="mercadopago"||m.tipo==="mercadopago"))}
+function svm(ms){ms=ms.map(function(m){return adminEsPagoAutomatico(m)?Object.assign({},m,{activo:false}):m});cfg=Object.assign({},cfg,{metodos:ms});guardarCfg();renderAdmin()}
+function renderMetodoQrPreview(){
+  var host=$("m-qrm");if(!host)return;
+  var img=safeImg(mQr);
+  host.innerHTML=img
+    ?'<div class="admin-qr-preview"><img src="'+img+'" alt="Vista previa del QR de pago"><div><b>QR cargado</b><button class="btn sm" type="button" data-x="qr-remove">Quitar QR</button></div></div>'
+    :'<span class="meta">Sube el QR oficial de la app de pago. Se mostrará encima del número.</span>';
+}
 function openMetodo(i){
-  var m=i>=0?metodos()[i]:{nombre:"",tipo:"transfer",activo:true};mIdx=i;mQr=m.qr||"";
-  $("dbox").innerHTML='<h2>'+(i>=0?"Editar método de pago":"Nuevo método de pago")+'</h2><label>Nombre<input id="m-nombre" placeholder="Ej: Nequi, Daviplata, Bancolombia"></label><label>Tipo<select id="m-tipo"><option value="transfer">Billetera o cuenta (Nequi, Daviplata, banco)</option><option value="link">Enlace de pago manual (tarjeta, PSE)</option><option value="mercadopago">Mercado Pago automático (Checkout Pro)</option><option value="efectivo">Contra entrega (efectivo)</option></select></label><div id="m-t" class="f"><label>Número o cuenta<input id="m-cuenta" placeholder="Ej: 300 000 0000"></label><label>A nombre de (opcional)<input id="m-titular"></label><label>Código QR (opcional)<input id="m-qrf" type="file" accept="image/*"></label><div class="meta" id="m-qrm"></div></div><div id="m-l" class="f"><label>Enlace de pago (empieza con https://)<input id="m-enlace" placeholder="https://..."></label></div><div id="m-mp" class="admin-note is-muted" style="display:none">El checkout de Mercado Pago se inicia desde el servidor. Configura sus credenciales privadas y aplica la migración SQL antes de activar este método.</div><label>Instrucciones para el cliente<textarea id="m-instr" rows="2"></textarea></label><label class="chk"><input id="m-activo" type="checkbox"> Activo</label><div class="err" id="merr"></div><div class="foot"><button class="btn" data-x="close">Cancelar</button><button class="btn primary" data-x="msave">Guardar</button></div>';
+  var m=i>=0?metodos()[i]:{nombre:"",tipo:"transfer",activo:true};if(adminEsPagoAutomatico(m)){alert("Mercado Pago está pausado por ahora. Usa un método manual con QR.");return}mIdx=i;mQr=m.qr||"";
+  $("dbox").innerHTML='<h2>'+(i>=0?"Editar método de pago":"Nuevo método de pago")+'</h2><label>Nombre<input id="m-nombre" placeholder="Ej: Nequi, Daviplata, Bancolombia"></label><label>Tipo<select id="m-tipo"><option value="transfer">Billetera o cuenta (pago manual con QR)</option><option value="link">Enlace de pago manual</option><option value="mercadopago" disabled>Mercado Pago automático (pausado)</option><option value="efectivo">Contra entrega (efectivo)</option></select></label><div id="m-t" class="f"><label>Número o cuenta<input id="m-cuenta" placeholder="Número que debe aparecer debajo del QR"></label><label>A nombre de (opcional)<input id="m-titular"></label><label>QR oficial de pago<input id="m-qrf" type="file" accept="image/png,image/jpeg,image/webp"></label><div class="admin-qr-upload" id="m-qrm" aria-live="polite"></div></div><div id="m-l" class="f"><label>Enlace manual de pago (empieza con https://)<input id="m-enlace" placeholder="https://..."></label></div><div id="m-mp" class="admin-note is-muted" style="display:none">Los pagos automáticos están pausados por ahora. Configura un método manual con QR.</div><label>Instrucciones para el cliente<textarea id="m-instr" rows="2"></textarea></label><label class="chk"><input id="m-activo" type="checkbox"> Activo</label><div class="err" id="merr"></div><div class="foot"><button class="btn" data-x="close">Cancelar</button><button class="btn primary" data-x="msave">Guardar</button></div>';
   $("m-nombre").value=m.nombre||"";$("m-tipo").value=m.tipo;$("m-cuenta").value=m.cuenta||"";$("m-titular").value=m.titular||"";$("m-enlace").value=m.enlace||"";$("m-instr").value=m.instr||"";$("m-activo").checked=m.activo!==false;
-  $("m-qrm").textContent=mQr?"QR cargado. Sube otro para reemplazarlo.":"";
-  var tu=function(nuevo){var t=$("m-tipo").value,mp=t==="mercadopago";$("m-t").style.display=t==="transfer"?"grid":"none";$("m-l").style.display=t==="link"?"grid":"none";$("m-mp").style.display=mp?"block":"none";if(mp&&nuevo){$("m-activo").checked=false;$("m-instr").value="Paga en Mercado Pago. Confirmaremos tu pago automáticamente."}};
+  renderMetodoQrPreview();
+  var tu=function(){var t=$("m-tipo").value,mp=t==="mercadopago";$("m-t").style.display=t==="transfer"?"grid":"none";$("m-l").style.display=t==="link"?"grid":"none";$("m-mp").style.display=mp?"block":"none"};
   $("m-tipo").addEventListener("change",function(){tu(true)});tu(false);
-  $("m-qrf").addEventListener("change",function(){if(this.files[0])resizeImg(this.files[0],500,"image/png",function(u){mQr=u;$("m-qrm").textContent="QR listo."})});
+  $("m-qrf").addEventListener("change",function(){if(this.files[0])resizeImg(this.files[0],700,"image/png",function(u){if(!u){$("merr").textContent="No se pudo procesar el QR. Prueba con una imagen PNG o JPG clara.";return}mQr=u;$("merr").textContent="";renderMetodoQrPreview()})});
   $("dlg").showModal();
 }
 function saveMetodo(){
   var t=$("m-tipo").value,n=$("m-nombre").value.trim(),cu=$("m-cuenta").value.trim(),en=$("m-enlace").value.trim();
   if(!n){$("merr").textContent="Escribe el nombre del método.";return}
-  if(t==="transfer"&&!cu&&!mQr){$("merr").textContent="Escribe el número o cuenta, o sube un código QR.";return}
+  if(t==="mercadopago"){$("merr").textContent="Los pagos automáticos están pausados. Configura un método manual con QR.";return}
+  if(t==="transfer"&&!cu){$("merr").textContent="Escribe el número o cuenta que aparecerá debajo del QR.";return}
+  if(t==="transfer"&&!mQr){$("merr").textContent="Sube el QR oficial de la aplicación de pago.";return}
   if(t==="link"&&!/^https:\/\//i.test(en)){$("merr").textContent="El enlace debe empezar con https://";return}
   var ms=metodos().map(function(x){return Object.assign({},x)});
-  if(t==="mercadopago"&&ms.some(function(x,i){return i!==mIdx&&(x.gateway==="mercadopago"||x.id==="mercadopago")})){$("merr").textContent="Solo puede haber un método Mercado Pago automático.";return}
-  var automatico=t==="mercadopago";
-  var m={id:automatico?"mercadopago":(mIdx>=0?ms[mIdx].id:uid()),nombre:n,tipo:automatico?"link":t,activo:$("m-activo").checked,cuenta:t==="transfer"?cu:"",titular:t==="transfer"?$("m-titular").value.trim():"",qr:t==="transfer"?mQr:"",enlace:automatico?"https://www.mercadopago.com.co":(t==="link"?en:""),instr:$("m-instr").value.trim()};
-  if(automatico)m.gateway="mercadopago";
+  var m={id:mIdx>=0?ms[mIdx].id:uid(),nombre:n,tipo:t,activo:$("m-activo").checked,cuenta:t==="transfer"?cu:"",titular:t==="transfer"?$("m-titular").value.trim():"",qr:t==="transfer"?mQr:"",enlace:t==="link"?en:"",instr:$("m-instr").value.trim()};
   if(mIdx>=0)ms[mIdx]=m;else ms.push(m);
   $("dlg").close();svm(ms);
 }

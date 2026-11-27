@@ -49,6 +49,15 @@
 .paybox{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;background:var(--bg)}
 .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:1.25rem;font-weight:700;letter-spacing:.02em}
 .qr{width:170px;max-width:60%;border-radius:12px;background:#fff;padding:6px;justify-self:center}
+.payment-qr-card{display:grid;justify-items:center;gap:10px;width:min(100%,340px);margin:2px auto;padding:16px;border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));border-radius:20px;background:linear-gradient(145deg,#fff,#f4f7fb);color:#101828;text-align:center;box-shadow:0 14px 32px rgba(0,0,0,.18)}
+.payment-qr-card .payment-qr-label{color:#475467}
+.payment-qr-card .qr{display:block;width:min(100%,250px);max-width:100%;aspect-ratio:1;object-fit:contain;padding:10px;border:1px solid #e4e7ec;border-radius:16px;background:#fff;box-shadow:0 6px 18px rgba(16,24,40,.1)}
+.payment-qr-card figcaption{max-width:30ch;color:#475467;font-size:.86rem;line-height:1.45}
+.payment-qr-label{font-size:.7rem;font-weight:800;letter-spacing:.11em;color:var(--muted)}
+.payment-destination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.payment-destination-copy{display:grid;gap:4px;min-width:0}
+.acct-number{font-size:clamp(1.1rem,4vw,1.45rem);letter-spacing:.035em;overflow-wrap:anywhere}
+.payment-account-holder{margin-top:-4px}
 .paytotal{display:flex;justify-content:space-between;align-items:baseline;padding:10px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line)}
 .paytotal b{font-size:1.6rem;color:var(--offer)}
 .okmark{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:1.8rem;background:linear-gradient(135deg,#f24a2e,#8b5cf6);color:#fff;box-shadow:0 0 22px rgba(139,92,246,.55)}

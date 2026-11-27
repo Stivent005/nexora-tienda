@@ -111,7 +111,7 @@ var TEXTOS={
   "pago.titulo":           "Forma de pago",
   "pago.totalAPagar":      "Total a pagar",
   "pago.sinMetodos":       "Por ahora no hay formas de pago disponibles para este pedido. Escríbenos por WhatsApp.",
-  "pago.confirmar":        "Confirmar pedido",
+  "pago.confirmar":        "Enviar para revisión",
   "pago.enviando":         "Enviando…",
   "pago.errorEnvio":       "El checkout fallo sin recibir detalles del servidor. Recarga la tienda e intenta de nuevo.",
   "pago.errorDemasiados":  "Has enviado varios pedidos seguidos. Espera unos minutos o escríbenos por WhatsApp.",

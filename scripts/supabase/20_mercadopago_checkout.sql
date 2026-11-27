@@ -36,23 +36,31 @@ create unique index if not exists pagos_abonos_proveedor_payment_uidx
   on public.pagos_abonos(proveedor,proveedor_payment_id)
   where proveedor='mercadopago' and proveedor_payment_id is not null;
 
--- Agrega el método apagado sin sustituir la configuración que ya tiene la tienda.
+-- Conserva los métodos actuales y deja Mercado Pago automático apagado.
 do $$
-declare v_config jsonb; v_metodos jsonb;
+declare v_config jsonb; v_metodos jsonb; v_hay_mercadopago boolean;
 begin
   select case when jsonb_typeof(valor)='object' then valor else '{}'::jsonb end
     into v_config from public.ajustes where clave='config' for update;
   if not found then return; end if;
   v_metodos:=case when jsonb_typeof(v_config->'metodos')='array' then v_config->'metodos' else '[]'::jsonb end;
-  if not exists(select 1 from jsonb_array_elements(v_metodos) as m(value)
-      where m.value->>'id'='mercadopago' or m.value->>'gateway'='mercadopago') then
+  select exists(select 1 from jsonb_array_elements(v_metodos) as m(value)
+      where m.value->>'id'='mercadopago' or m.value->>'gateway'='mercadopago')
+    into v_hay_mercadopago;
+  if v_hay_mercadopago then
+    select coalesce(jsonb_agg(
+      case when m.value->>'id'='mercadopago' or m.value->>'gateway'='mercadopago'
+        then m.value||jsonb_build_object('activo',false) else m.value end
+      order by m.ord),'[]'::jsonb)
+      into v_metodos from jsonb_array_elements(v_metodos) with ordinality as m(value,ord);
+  else
     v_metodos:=v_metodos||jsonb_build_array(jsonb_build_object(
       'id','mercadopago','nombre','Mercado Pago','tipo','link','gateway','mercadopago',
       'activo',false,'enlace','https://www.mercadopago.com.co',
-      'instr','Paga en Mercado Pago. Confirmaremos tu pago automáticamente.'
+      'instr','Pago automático pausado por ahora.'
     ));
-    update public.ajustes set valor=jsonb_set(v_config,'{metodos}',v_metodos,true) where clave='config';
   end if;
+  update public.ajustes set valor=jsonb_set(v_config,'{metodos}',v_metodos,true) where clave='config';
 end $$;
 
 create or replace function public.nexora_mp_ids_validos(p_pedido_id text,p_order_id text,p_external_reference text)

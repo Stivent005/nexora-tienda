@@ -63,7 +63,8 @@ function metodosBase(){return[
  {id:"banco",nombre:"Transferencia bancaria",tipo:"transfer",activo:true,cuenta:cfg.banco||"",titular:"",qr:"",instr:"Haz la transferencia por el valor exacto y sube tu comprobante."},
  {id:"tarjeta",nombre:"Tarjeta o PSE",tipo:"link",activo:false,enlace:"",instr:"Paga en línea de forma segura y luego escribe la referencia de tu pago."}]}
 function metodos(){return cfg.metodos||metodosBase()}
-function pagos(){return metodos().filter(function(m){return m.activo!==false})}
+function esPagoAutomatico(m){return !!(m&&(m.gateway==="mercadopago"||m.id==="mercadopago"||m.tipo==="mercadopago"))}
+function pagos(){return metodos().filter(function(m){return m.activo!==false&&!esPagoAutomatico(m)})}
 var cart=lsGet("tienda_carrito",{});
 if(!localDemoPreview&&cart[DEMO_PRODUCT_ID]){delete cart[DEMO_PRODUCT_ID];lsSet("tienda_carrito",cart)}
 var orders=(cfg.supabase&&cfg.supabase.url)?[]:lsGet("tienda_pedidos",[]),coupon=null,newLogo,compImg="",pedidoFiltro="Pendiente",ordersErr="";

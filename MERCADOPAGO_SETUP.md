@@ -1,39 +1,25 @@
-# Activar Mercado Pago en NEXORA
+# Pagos manuales con QR en NEXORA
 
-La integración usa Checkout Pro con Orders API. La tienda crea el pedido en Supabase; el Worker crea la order de Mercado Pago a partir del total validado por la base de datos; el pedido solo pasa a `Pagado` después de una notificación Webhook autenticada y de verificar la order directamente con Mercado Pago.
+Por ahora los cobros se revisan manualmente. Mercado Pago automático permanece apagado. No hace falta configurar secretos del Worker ni Webhooks para recibir pagos por QR.
 
-## 1. Aplicar la migración
+## Configurar el QR y el número
 
-En Supabase SQL Editor, ejecuta `scripts/supabase/20_mercadopago_checkout.sql` después de las migraciones de seguridad, cuentas e idempotencia que ya usa la tienda. La migración agrega el método Mercado Pago apagado, guarda los identificadores del proveedor, protege la verificación manual y crea las RPC necesarias.
+1. Entra a **Administración → Pagos** y edita el método de billetera/cuenta que vas a recibir.
+2. Escribe el número o cuenta que corresponde al QR.
+3. Sube el QR oficial que genera la aplicación de pago. La tienda lo muestra primero y pone el número debajo; el panel enseña una vista previa antes de guardar.
+4. Guarda el método y déjalo activo. Usa un QR que corresponda a esa misma cuenta.
 
-Si el diagnóstico confirma que existen `pedidos`, `pagos_abonos`, `pedido_propietarios` y `ajustes`, pero falta `nexora_guardar_estado_pedido()`, ejecuta primero `scripts/supabase/19b_reparar_estado_pedido.sql`. Si la reparación termina sin error, vuelve a ejecutar completa la migración 20. La reparación se detiene sin cambios y enumera dependencias si la migración 05 está incompleta.
+El QR y el número se guardan en la configuración de la tienda, no en el código ni en GitHub. No los publiques en el repositorio o en mensajes.
 
-## 2. Agregar secretos a Cloudflare
+## Cómo se revisa cada pedido
 
-Configura estos valores como secretos/variables del Worker `nexora-tienda`. No los guardes en `js/config.js`, archivos `.env`, GitHub ni mensajes de chat.
+1. El cliente escanea el QR, paga el valor exacto y envía el pedido con la referencia o captura.
+2. El pedido y el pago quedan **Pendientes**. La captura o referencia sirve como evidencia, pero no confirma que el dinero haya llegado.
+3. En **Administración → Pagos → Pendientes**, comprueba el ingreso en la cuenta y pulsa **Verificar pago completo**.
+4. Solo tras esa revisión el pedido cambia a **Pagado** y aparece en **Pedidos → Por entregar**.
 
-| Nombre | Valor |
-| --- | --- |
-| `SUPABASE_URL` | URL del proyecto Supabase |
-| `SUPABASE_ANON_KEY` | Clave pública/anon de Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clave privada `service_role` de Supabase |
-| `MERCADOPAGO_ACCESS_TOKEN` | Access Token de la aplicación de Mercado Pago |
-| `MERCADOPAGO_WEBHOOK_SECRET` | Firma secreta de Webhooks de esa aplicación |
+## Migraciones necesarias en Supabase
 
-La clave `service_role`, el Access Token y la firma del webhook deben permanecer privadas. Si usas Wrangler, agrega cada valor de forma interactiva con `npx wrangler secret put NOMBRE`; no escribas el secreto en el comando.
+La migración `20_mercadopago_checkout.sql` también crea la consulta que permite listar y revisar los pagos en el panel; su método de Mercado Pago queda apagado. Si ya están las tablas `pedidos`, `pagos_abonos`, `pedido_propietarios` y `ajustes`, pero falta `nexora_guardar_estado_pedido()`, ejecuta `19b_reparar_estado_pedido.sql` primero y después ejecuta completa la migración 20. La reparación se detiene y enumera dependencias si la migración 05 está incompleta.
 
-## 3. Configurar Webhooks
-
-En la aplicación de Mercado Pago, configura el evento **Order (Mercado Pago)** / **Orders** para la URL HTTPS pública:
-
-```text
-https://TU-DOMINIO/api/mercadopago/webhook
-```
-
-Guarda la firma secreta que Mercado Pago genera y configúrala como `MERCADOPAGO_WEBHOOK_SECRET` en el mismo entorno. Repite la configuración para prueba y producción cuando uses credenciales separadas.
-
-## 4. Activar el método
-
-Después de aplicar la migración y desplegar el Worker con sus variables, abre Administración → Pagos, edita Mercado Pago automático y actívalo. El checkout exige que el cliente haya iniciado sesión. Para empezar, usa credenciales de prueba y usuarios de prueba de Mercado Pago.
-
-La tienda no confía en los parámetros que Mercado Pago agrega al regresar al sitio. La confirmación real es el Webhook firmado y la consulta servidor a servidor de la order. Si falta un secreto o la migración todavía no está aplicada, el checkout automático devuelve un error y el pedido no se marca como pagado.
+La automatización de Mercado Pago solo debe prepararse si más adelante decides activarla expresamente.
