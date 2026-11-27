@@ -6,6 +6,8 @@ La integración usa Checkout Pro con Orders API. La tienda crea el pedido en Sup
 
 En Supabase SQL Editor, ejecuta `scripts/supabase/20_mercadopago_checkout.sql` después de las migraciones de seguridad, cuentas e idempotencia que ya usa la tienda. La migración agrega el método Mercado Pago apagado, guarda los identificadores del proveedor, protege la verificación manual y crea las RPC necesarias.
 
+Si el diagnóstico confirma que existen `pedidos`, `pagos_abonos`, `pedido_propietarios` y `ajustes`, pero falta `nexora_guardar_estado_pedido()`, ejecuta primero `scripts/supabase/19b_reparar_estado_pedido.sql`. Si la reparación termina sin error, vuelve a ejecutar completa la migración 20. La reparación se detiene sin cambios y enumera dependencias si la migración 05 está incompleta.
+
 ## 2. Agregar secretos a Cloudflare
 
 Configura estos valores como secretos/variables del Worker `nexora-tienda`. No los guardes en `js/config.js`, archivos `.env`, GitHub ni mensajes de chat.

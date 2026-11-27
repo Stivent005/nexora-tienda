@@ -3,13 +3,26 @@
 begin;
 
 do $$
+declare v_faltantes text[]:=array[]::text[];
 begin
-  if to_regclass('public.pedidos') is null
-     or to_regclass('public.pagos_abonos') is null
-     or to_regclass('public.pedido_propietarios') is null
-     or to_regclass('public.ajustes') is null
-     or to_regprocedure('public.nexora_guardar_estado_pedido()') is null then
-    raise exception 'NEXORA: aplica primero las migraciones 05 y 07 antes de configurar Mercado Pago.';
+  if to_regclass('public.pedidos') is null then
+    v_faltantes:=array_append(v_faltantes,'public.pedidos (migración 05)');
+  end if;
+  if to_regclass('public.pagos_abonos') is null then
+    v_faltantes:=array_append(v_faltantes,'public.pagos_abonos (migración 05)');
+  end if;
+  if to_regclass('public.pedido_propietarios') is null then
+    v_faltantes:=array_append(v_faltantes,'public.pedido_propietarios (migración 07)');
+  end if;
+  if to_regclass('public.ajustes') is null then
+    v_faltantes:=array_append(v_faltantes,'public.ajustes (esquema base)');
+  end if;
+  if to_regprocedure('public.nexora_guardar_estado_pedido()') is null then
+    v_faltantes:=array_append(v_faltantes,'public.nexora_guardar_estado_pedido() (migración 05; revisa 19b_reparar_estado_pedido.sql)');
+  end if;
+  if cardinality(v_faltantes)>0 then
+    raise exception 'NEXORA: no se puede configurar Mercado Pago. Dependencias faltantes: %.',
+      array_to_string(v_faltantes,', ');
   end if;
 end $$;
 
