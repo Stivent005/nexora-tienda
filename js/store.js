@@ -424,6 +424,7 @@ function disponibles(L) {
 
   return pagos().filter(function (m) {
     return !(
+      (m.gateway === "mercadopago" && (!Backend.remote || !Backend.accountsReady)) ||
       (m.tipo === "efectivo" && hv) ||
       (m.tipo === "link" && !safeUrl(m.enlace)) ||
       (m.tipo === "transfer" && !m.cuenta && !safeImg(m.qr))
@@ -526,6 +527,13 @@ function detallePago(m) {
   var h = '<div class="paybox">';
   var qr = safeImg(m.qr);
   var lk = safeUrl(m.enlace);
+
+  if (m.gateway === "mercadopago") {
+    return h + '<div><b>Checkout seguro de Mercado Pago</b></div>' +
+      '<div class="meta">Al confirmar, te llevaremos a Mercado Pago para elegir tarjeta, PSE u otro medio disponible.</div>' +
+      '<div class="meta">Valor exacto: <b>' + fmt.format(total()) + '</b> COP</div>' +
+      '<div class="payment-evidence-note" role="note">El pedido se marcará como pagado cuando Mercado Pago confirme la transacción. El resultado de la pantalla de regreso no confirma el pago.</div></div>';
+  }
 
   if (m.tipo === "efectivo") {
     h += '<div>' + esc(m.instr || T("pago.efectivoDefecto")) + '</div>';
@@ -922,8 +930,9 @@ function sendOrder() {
   var m = disponibles(L).find(function (x) {
     return x.id === chk.pay;
   });
-  var referencia = chk.ref.trim();
-  var comprobante = m && m.tipo !== "efectivo" ? compImg : "";
+  var esMercadoPago = !!(m && m.gateway === "mercadopago");
+  var referencia = esMercadoPago ? "NEXORA_MP_PENDING" : chk.ref.trim();
+  var comprobante = m && m.tipo !== "efectivo" && !esMercadoPago ? compImg : "";
 
   var f = validarDatos(L);
 
@@ -931,6 +940,7 @@ function sendOrder() {
     f.push(T("falta.formaPago"));
   } else if (
     m.tipo !== "efectivo" &&
+    !esMercadoPago &&
     !referencia &&
     !comprobante
   ) {
@@ -1017,6 +1027,19 @@ function sendOrder() {
   btn.textContent = T("pago.enviando");
 
   Backend.crear(o).then(function () {
+    if (esMercadoPago) {
+      return Backend.iniciarPagoMercadoPago(o.id).then(function (checkout) {
+        if (typeof clearPendingOrderKey === "function") clearPendingOrderKey();
+        if (typeof guardarUltimoPedido === "function") guardarUltimoPedido(o);
+        recordarDatos(o.nombre, o.tel, o.idJuego);
+        cart = {};
+        coupon = null;
+        resetChk();
+        lsSet("tienda_carrito", cart);
+        step = "cart";
+        window.location.assign(checkout.checkoutUrl);
+      });
+    }
     if(typeof clearPendingOrderKey==="function")clearPendingOrderKey();
     if (typeof guardarUltimoPedido === "function") guardarUltimoPedido(o);
     recordarDatos(o.nombre, o.tel, o.idJuego);
@@ -1092,6 +1115,16 @@ function sendOrder() {
     }
     $("err").focus();
   });
+}
+
+function mostrarAvisoRetornoMercadoPago() {
+  if (typeof ADMIN_PAGE !== "undefined" && ADMIN_PAGE) return;
+  var url = new URL(window.location.href);
+  if (!url.searchParams.has("mp_return")) return;
+  url.searchParams.delete("mp_return");
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  var panel = $("panel");
+  if (panel) panel.innerHTML = '<div class="payment-return-notice" role="status"><b>Estamos comprobando tu pago</b><span>El regreso desde Mercado Pago no confirma el resultado. El estado real aparecerá en Mis compras cuando recibamos la notificación segura.</span></div>';
 }
 
 function applyCoupon() {

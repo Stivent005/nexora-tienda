@@ -515,6 +515,36 @@ var Backend=(function(){
         :null;
     },
 
+    iniciarPagoMercadoPago:function(pedidoId){
+      if(!remote||!accountsReady||!customerUser||!token){
+        return Promise.reject(new Error("Inicia sesión antes de continuar con Mercado Pago."));
+      }
+      var intento=0;
+      function solicitar(){
+        return fetch("/api/mercadopago/checkout",{
+          method:"POST",
+          headers:{"Content-Type":"application/json",Authorization:"Bearer "+token},
+          body:JSON.stringify({pedidoId:String(pedidoId||"")})
+        }).then(function(r){
+          return r.text().then(function(body){
+            var data={};
+            try{data=body?JSON.parse(body):{}}catch(e){}
+            if(r.status===401&&intento++===0&&refreshT){
+              return refrescar().then(solicitar);
+            }
+            if(!r.ok)throw new Error(data.error||"No se pudo iniciar el pago con Mercado Pago.");
+            var url;
+            try{url=new URL(data.checkoutUrl)}catch(e){throw new Error("Mercado Pago devolvió un enlace de pago inválido.")}
+            if(url.protocol!=="https:"||!["www.mercadopago.com.co","mercadopago.com.co"].includes(url.hostname)){
+              throw new Error("El enlace de pago no pertenece al sitio oficial de Mercado Pago Colombia.");
+            }
+            return {checkoutUrl:url.href};
+          });
+        });
+      }
+      return solicitar();
+    },
+
     restoreCustomer:function(){
       return !ADMIN_PAGE&&
         accountsReady&&

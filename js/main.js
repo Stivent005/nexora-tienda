@@ -58,6 +58,7 @@ document.addEventListener("click",function(e){
 });
 if($("adminlink"))$("adminlink").addEventListener("click",function(){if(!authed)askPin()});
 renderAll();
+if (typeof mostrarAvisoRetornoMercadoPago === "function") mostrarAvisoRetornoMercadoPago();
 /* Arranque: la tienda lee el catálogo de la base de datos; el panel (admin.html) pide sesión. */
 if(ADMIN_PAGE){
   if(Backend.remote&&Backend.restore()){authed=true;renderAll();cargarCatalogoAdmin().then(cargarPedidos)}

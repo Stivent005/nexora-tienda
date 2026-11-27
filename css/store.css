@@ -30,6 +30,8 @@
 .digital-data-group legend{padding:0 6px;font-weight:800;color:var(--text)}
 .address-fields{align-items:end}
 .payment-evidence-note{margin:0;padding:10px 12px;border-left:3px solid var(--offer);border-radius:8px;background:rgba(255,207,74,.07);font-size:.85rem}
+.payment-return-notice{display:grid;gap:4px;margin:0 0 18px;padding:14px 16px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--surface);color:var(--text)}
+.payment-return-notice span{color:var(--muted);font-size:.92rem}
 .qty-input{width:76px!important;min-width:68px;text-align:center;padding:6px!important}
 @media(max-width:380px){.wrap{padding-left:12px;padding-right:12px}.grid{grid-template-columns:minmax(0,1fr)}.digital-data-group{padding:10px}.steps{gap:8px;font-size:.78rem}.qty{gap:4px}}
 /* Pago por pasos */
